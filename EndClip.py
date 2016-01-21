@@ -19,86 +19,12 @@ from datetime import datetime
 from bisect import bisect
 import numpy as np
 
-###Module for testing
+###Custom modules
+from module.utils_others import now_time, Input_config_file
+
+###Modules for testing
 import matplotlib.pyplot as plt
 
-#Print out comment with now time
-def now_time(comment):
-    now = datetime.now()
-    nowtime = "{0:%Y-%m-%d %H:%M:%S}".format(now)
-    print ('[' + nowtime + ']' + ' ' + comment)
-
-#Parse configure file
-def parse_cfgfile(cfg_file):
-    Group1_Tophat_aligned_file = ''
-    Group2_Tophat_aligned_file = ''
-    output_directory = ''
-    Annotated_3UTR_file = ''
-    PolyA_site_infor = ''
-    Output_result_file = ''
-
-    Num_least_in_group1_local = ''
-    Num_least_in_group2_local = ''
-    Coverage_cutoff_local = ''
-    FDR_cutoff_local = ''
-    Fold_change_cutoff_local = ''
-    PDUI_cutoff_local = ''
-    Coverage_pPAS_cutoff_local = ''
-
-    for line in open(cfg_file, 'r'):
-        if line == '\n' or line == '#':
-            continue
-        line = line.rstrip()
-        line = line.replace(' ','')
-        command = line.split("=")
-
-        #File/Directory
-        if command[0] == 'Group1_Tophat_aligned_Wig':
-            Group1_Tophat_aligned_file = command[1].split(',')
-        if command[0] == 'Group2_Tophat_aligned_Wig':
-            Group2_Tophat_aligned_file = command[1].split(',')
-        if command[0] == 'Output_directory':
-            output_directory = command[1]
-            if output_directory[-1] != '/':
-                output_directory += '/'
-        if command[0] == 'Annotated_3UTR':
-            Annotated_3UTR_file = command[1]
-        if command[0] == 'PolyA_site_infor':
-            PolyA_site_infor = command[1]
-        if command[0] == 'Output_result_file':
-            Output_result_file = command[1]
-
-        #Parameter
-        if command[0] == 'Num_least_in_group1':
-            Num_least_in_group1_local = command[1]
-        if command[0] == 'Num_least_in_group2':
-            Num_least_in_group2_local = command[1]
-        if command[0] == 'Coverage_cutoff':
-            Coverage_cutoff_local = command[1]
-        if command[0] == 'FDR_cutoff':
-            FDR_cutoff_local = command[1]
-        if command[0] == 'PDUI_cutoff':
-            Fold_change_cutoff_local = command[1]
-        if command[0] == 'Fold_change_cutoff':
-            PDUI_cutoff_local = command[1]
-        if command[0] == 'Coverage_pPAS_cutoff':
-            Coverage_pPAS_cutoff_local = command[1]
-
-    #Error handing
-    if Group1_Tophat_aligned_file == '':
-        sys.exit("ERROR: No Tophat aligned BAM file for group 1...")
-    if Group2_Tophat_aligned_file == '':
-        sys.exit("ERROR: No Tophat aligned BAM file for group 2...")
-    if output_directory == '':
-        sys.exit("ERROR: No output directory...")
-    if Annotated_3UTR_file == '':
-        sys.exit("ERROR: No annotated 3'UTR file...")
-    if PolyA_site_infor == '':
-        sys.exit("ERROR: No polyA site information file...")
-    if Output_result_file == '':
-        sys.exit("ERROR: No result file name...")
-
-    return Group1_Tophat_aligned_file, Group2_Tophat_aligned_file, output_directory, Annotated_3UTR_file, PolyA_site_infor, Output_result_file, Num_least_in_group1_local, Num_least_in_group2_local, Coverage_cutoff_local, FDR_cutoff_local, Fold_change_cutoff_local, PDUI_cutoff_local, Coverage_pPAS_cutoff_local
 
 def Load_Target_Wig_files(All_Wig_files, UTR_Annotation_file):
     UTR_events_dict = {}
@@ -111,7 +37,7 @@ def Load_Target_Wig_files(All_Wig_files, UTR_Annotation_file):
         region_start = fields[1]
         region_end = fields[2]
         name = fields[3]
-        curr_strand = fields[-1]
+        curr_strand = fields[5]
         UTR_pos = "%s:%s-%s" % (curr_chr, region_start, region_end)
         
         #Define 3'UTR Annotation regions
@@ -323,9 +249,17 @@ def De_Novo_3UTR_all_samples_bp_extimation(All_Samples_curr_3UTR_coverages, UTR_
             Estimated_3UTR_abundance_list.append([All_samples_result[1], All_samples_result[2]]) #Long/short UTR abundance
 
         #TODO: Cross Point:CTRLとCFIm25ノックダウンでの各bpのcoverageの差分を求める。
-        coverage_variance_CP = np.array(Region_Coverages[0] - Region_Coverages[1])**2
-        plt.plot(coverage_variance_CP)
+        coverage_variance_CP = np.array(Region_Coverages[1] - Region_Coverages[0])
+        coverage_variance_CP2 = coverage_variance_CP**2
+        plt.plot(coverage_variance_CP2)
         filename = "data/output_CP_variance_" + test_name + ".png"
+        plt.savefig(filename)
+        plt.close()
+
+        test_length = len(coverage_variance_CP)
+        plt.plot(coverage_variance_CP)
+        plt.plot(np.repeat([0],test_length))
+        filename = "data/output_CP2_variance_" + test_name + ".png"
         plt.savefig(filename)
         plt.close()
 
@@ -408,7 +342,40 @@ def main():
     cfg_file = sys.argv[1]
 
     now_time("Parsing configure file...")
-    Group1_Tophat_aligned_file, Group2_Tophat_aligned_file, output_directory, Annotated_3UTR_file, PolyA_site_infor, Output_result_file, Num_least_in_group1_local, Num_least_in_group2_local, Coverage_cutoff_local, FDR_cutoff_local, Fold_change_cutoff_local, PDUI_cutoff_local, Coverage_pPAS_cutoff_local = parse_cfgfile(cfg_file)
+    config_dict = Input_config_file(cfg_file)
+
+    #Check configure file
+    if not 'Group1_Tophat_aligned_Wig' in config_dict:
+        sys.exit("ERROR: Group1_Tophat_aligned_Wig does not exist...")
+    if not 'Group2_Tophat_aligned_Wig' in config_dict:
+        sys.exit("ERROR: Group2_Tophat_aligned_Wig does not exist...")
+    if not 'Output_directory' in config_dict:
+        sys.exit("ERROR: Output_directory does not exist...")
+    if not 'Annotated_3UTR' in config_dict:
+        sys.exit("ERROR: Annotated_3UTR was not designated...")
+    if not 'Output_result_file' in config_dict:
+        sys.exit("ERROR: Output_result_file does not exist...")
+
+    #File/Directory
+    Group1_Tophat_aligned_file = config_dict['Group1_Tophat_aligned_Wig']
+    Group2_Tophat_aligned_file = config_dict['Group2_Tophat_aligned_Wig']
+    output_directory = config_dict['Output_directory']
+    if output_directory[-1] != '/':
+        output_directory += '/'
+    Annotated_3UTR_file = config_dict['Annotated_3UTR']
+    Output_result_file = config_dict['Output_result_file']
+
+    #Parameter
+    #TODO: リストを使って、ディクショナリのキーに含まれているかどうか判断。リスト内包表記などを利用。
+    Num_least_in_group1_local = config_dict['Num_least_in_group1']
+    Num_least_in_group2_local = config_dict['Num_least_in_group2']
+    Coverage_cutoff_local = config_dict['Coverage_cutoff']
+    FDR_cutoff_local = config_dict['FDR_cutoff']
+    Fold_change_cutoff_local = config_dict['PDUI_cutoff']
+    PDUI_cutoff_local = config_dict['Fold_change_cutoff']
+    Coverage_pPAS_cutoff_local = config_dict['Coverage_pPAS_cutoff']
+
+    #Group1_Tophat_aligned_file, Group2_Tophat_aligned_file, output_directory, Annotated_3UTR_file, PolyA_site_infor, Output_result_file, Num_least_in_group1_local, Num_least_in_group2_local, Coverage_cutoff_local, FDR_cutoff_local, Fold_change_cutoff_local, PDUI_cutoff_local, Coverage_pPAS_cutoff_local = parse_cfgfile(cfg_file)
 
     #Collect sample files
     num_group_1 = len(Group1_Tophat_aligned_file)
