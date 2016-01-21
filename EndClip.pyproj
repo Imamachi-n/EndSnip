@@ -1,0 +1,94 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003" ToolsVersion="4.0">
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <SchemaVersion>2.0</SchemaVersion>
+    <ProjectGuid>688b61c9-31e5-456a-a6b5-2921b31111f4</ProjectGuid>
+    <ProjectHome>.</ProjectHome>
+    <StartupFile>EndClip.py</StartupFile>
+    <SearchPath>
+    </SearchPath>
+    <WorkingDirectory>.</WorkingDirectory>
+    <OutputPath>.</OutputPath>
+    <Name>EndClip</Name>
+    <RootNamespace>EndClip</RootNamespace>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
+    <DebugSymbols>true</DebugSymbols>
+    <EnableUnmanagedDebugging>false</EnableUnmanagedDebugging>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
+    <DebugSymbols>true</DebugSymbols>
+    <EnableUnmanagedDebugging>false</EnableUnmanagedDebugging>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="EndClip.py" />
+    <Compile Include="EndClip_prep.py">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="module\utils_extract_pA_sites.py">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="module\utils_others.py">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="module\__init__.py">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="utils\gtf_covertion_only_CDS_gtf.py">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="module\utils_extract_UTR_bed_file.py">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="utils\make_test_wig_file.py">
+      <SubType>Code</SubType>
+    </Compile>
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="DaPars_Test_data\" />
+    <Folder Include="DaPars_Test_data\tmp\" />
+    <Folder Include="data\" />
+    <Folder Include="module\" />
+    <Folder Include="utils\" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="DaPars_Test_data\DaPars_Test_data_result_temp.txt" />
+    <Content Include="data\Condition_A_chrX.wig" />
+    <Content Include="data\Condition_B_chrX.wig" />
+    <Content Include="data\DaPars_PTEN_ELAVL1_test_data_configure.txt" />
+    <Content Include="data\DaPars_test_data_configure.txt" />
+    <Content Include="data\EndClip_prep_configure_file.txt" />
+    <Content Include="data\hg19_refseq_extracted_3UTR.bed" />
+    <Content Include="data\hg19_refseq_extracted_3UTR_PTEN_ELAVL1.bed" />
+    <Content Include="data\output_coverage_ELAVL1.png" />
+    <Content Include="data\output_coverage_PTEN.png" />
+    <Content Include="data\output_CP_variance_ELAVL1.png" />
+    <Content Include="data\output_CP_variance_PTEN.png" />
+    <Content Include="data\output_variance_ELAVL1.png" />
+    <Content Include="data\output_variance_PTEN.png" />
+    <Content Include="data\polyA_DB_hg19.bed" />
+    <Content Include="data\refGene.txt" />
+    <Content Include="data\Refseq_gene_hg19_June_02_2014.gtf" />
+    <Content Include="data\Refseq_gene_hg19_June_02_2014_CDS_only.gtf" />
+    <Content Include="data\Refseq_gene_hg19_June_02_2014_CDS_only.gtf.bz2" />
+    <Content Include="data\siCFIm25-1_accepted_hits_PTEN_ELAVL1.bam.wig" />
+    <Content Include="data\siCTRL_S_accepted_hits_PTEN_ELAVL1.bam.wig" />
+    <Content Include="EndClip_preparation.sh" />
+    <Content Include="EndClip_run.sh" />
+  </ItemGroup>
+  <PropertyGroup>
+    <VisualStudioVersion Condition="'$(VisualStudioVersion)' == ''">10.0</VisualStudioVersion>
+    <PtvsTargetsFile>$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)\Python Tools\Microsoft.PythonTools.targets</PtvsTargetsFile>
+  </PropertyGroup>
+  <Import Condition="Exists($(PtvsTargetsFile))" Project="$(PtvsTargetsFile)" />
+  <Import Condition="!Exists($(PtvsTargetsFile))" Project="$(MSBuildToolsPath)\Microsoft.Common.targets" />
+  <!-- Uncomment the CoreCompile target to enable the Build command in
+       Visual Studio and specify your pre- and post-build commands in
+       the BeforeBuild and AfterBuild targets below. -->
+  <!--<Target Name="CoreCompile" />-->
+  <Target Name="BeforeBuild">
+  </Target>
+  <Target Name="AfterBuild">
+  </Target>
+</Project>
