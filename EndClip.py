@@ -346,45 +346,24 @@ def main():
 
     #Check configure file
     if not 'Group1_Tophat_aligned_Wig' in config_dict:
-        sys.exit("ERROR: Group1_Tophat_aligned_Wig does not exist...")
+        sys.exit("ERROR: No Tophat aligned BAM file for group 1...")
     if not 'Group2_Tophat_aligned_Wig' in config_dict:
-        sys.exit("ERROR: Group2_Tophat_aligned_Wig does not exist...")
+        sys.exit("ERROR: No Tophat aligned BAM file for group 2...")
     if not 'Output_directory' in config_dict:
-        sys.exit("ERROR: Output_directory does not exist...")
+        sys.exit("ERROR: No output directory...")
     if not 'Annotated_3UTR' in config_dict:
-        sys.exit("ERROR: Annotated_3UTR was not designated...")
+        sys.exit("ERROR: No annotated 3'UTR file...")
     if not 'Output_result_file' in config_dict:
-        sys.exit("ERROR: Output_result_file does not exist...")
+        sys.exit("ERROR: No result file name...")
 
     #File/Directory
-    Group1_Tophat_aligned_file = config_dict['Group1_Tophat_aligned_Wig']
-    Group2_Tophat_aligned_file = config_dict['Group2_Tophat_aligned_Wig']
+    Group1_Tophat_aligned_file = config_dict['Group1_Tophat_aligned_Wig'].split(',')
+    Group2_Tophat_aligned_file = config_dict['Group2_Tophat_aligned_Wig'].split(',')
     output_directory = config_dict['Output_directory']
     if output_directory[-1] != '/':
         output_directory += '/'
     Annotated_3UTR_file = config_dict['Annotated_3UTR']
     Output_result_file = config_dict['Output_result_file']
-
-    #Parameter
-    #TODO: リストを使って、ディクショナリのキーに含まれているかどうか判断。リスト内包表記などを利用。
-    Num_least_in_group1_local = config_dict['Num_least_in_group1']
-    Num_least_in_group2_local = config_dict['Num_least_in_group2']
-    Coverage_cutoff_local = config_dict['Coverage_cutoff']
-    FDR_cutoff_local = config_dict['FDR_cutoff']
-    Fold_change_cutoff_local = config_dict['PDUI_cutoff']
-    PDUI_cutoff_local = config_dict['Fold_change_cutoff']
-    Coverage_pPAS_cutoff_local = config_dict['Coverage_pPAS_cutoff']
-
-    #Group1_Tophat_aligned_file, Group2_Tophat_aligned_file, output_directory, Annotated_3UTR_file, PolyA_site_infor, Output_result_file, Num_least_in_group1_local, Num_least_in_group2_local, Coverage_cutoff_local, FDR_cutoff_local, Fold_change_cutoff_local, PDUI_cutoff_local, Coverage_pPAS_cutoff_local = parse_cfgfile(cfg_file)
-
-    #Collect sample files
-    num_group_1 = len(Group1_Tophat_aligned_file)
-    num_group_2 = len(Group2_Tophat_aligned_file)
-
-    All_Sample_files = Group1_Tophat_aligned_file[:]
-    All_Sample_files.extend(Group2_Tophat_aligned_file)
-
-    num_samples = len(All_Sample_files)
 
     #Default parameters
     global Num_least_in_group1
@@ -401,23 +380,52 @@ def main():
     FDR_cutoff = 0.05
     Fold_change_cutoff = 0.59 #1.5-fold change
     PDUI_cutoff = 0.2
-    Coverage_pPAS_cutoff = 5
-
+    Coverage_pPAS_cutoff = 5.0
+    
     #Check parameters
-    if Num_least_in_group1_local != '':
-        Num_least_in_group1 = float(Num_least_in_group1_local)
-    if Num_least_in_group2_local != '':
-        Num_least_in_group2 = float(Num_least_in_group2_local)
-    if Coverage_cutoff_local != '':
-        Coverage_cutoff = float(Coverage_cutoff_local)
-    if FDR_cutoff_local != '':
-        FDR_cutoff = float(FDR_cutoff_local)
-    if Fold_change_cutoff_local != '':
-        Fold_change_cutoff = float(Fold_change_cutoff_local)
-    if PDUI_cutoff_local != '':
-        PDUI_cutoff = float(PDUI_cutoff_local)
-    if Coverage_pPAS_cutoff_local != '':
-        Coverage_pPAS_cutoff = float(Coverage_pPAS_cutoff_local)
+    if not 'Num_least_in_group1' in config_dict:
+        print("  Num_least_in_group1: Default parameter(1) was designated.")
+    else:
+        Num_least_in_group1 = float(config_dict['Num_least_in_group1'])
+
+    if not 'Num_least_in_group2' in config_dict:
+        print("  Num_least_in_group2: Default parameter(1) was designated.")
+    else:
+        Num_least_in_group2 = float(config_dict['Num_least_in_group2'])
+
+    if not 'Coverage_cutoff' in config_dict:
+        print("  Coverage_cutoff: Default parameter(30) was designated.")
+    else:
+        Coverage_cutoff = float(config_dict['Coverage_cutoff'])
+
+    if not 'FDR_cutoff' in config_dict:
+        print("  FDR_cutoff: Default parameter(0.05) was designated.")
+    else:
+        FDR_cutoff = float(config_dict['FDR_cutoff'])
+    
+    if not 'Fold_change_cutoff' in config_dict:
+        print("  Fold_change_cutoff: Default parameter(0.59[log2]/1.5-fold) was designated.")
+    else:
+        Fold_change_cutoff = config_dict['Fold_change_cutoff']
+
+    if not 'PDUI_cutoff' in config_dict:
+        print("  PDUI_cutoff: Default parameter(0.2) was designated.")
+    else:
+        PDUI_cutoff = float(config_dict['PDUI_cutoff'])
+
+    if not 'Coverage_pPAS_cutoff' in config_dict:
+        print("  Coverage_pPAS_cutoff: Default parameter(5.0) was designated.")
+    else:
+        Coverage_pPAS_cutoff = float(config_dict['Coverage_pPAS_cutoff'])
+
+    #Collect sample files
+    num_group_1 = len(Group1_Tophat_aligned_file)
+    num_group_2 = len(Group2_Tophat_aligned_file)
+
+    All_Sample_files = Group1_Tophat_aligned_file[:]
+    All_Sample_files.extend(Group2_Tophat_aligned_file)
+
+    num_samples = len(All_Sample_files)
 
     #Prepare output directory
     d = os.path.dirname(output_directory)
