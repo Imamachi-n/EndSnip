@@ -26,6 +26,12 @@
     <Compile Include="EndClip_prep.py">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="module\core_coverage_comparison.py">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="module\core_load_wig_files.py">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="module\utils_extract_pA_sites.py">
       <SubType>Code</SubType>
     </Compile>
