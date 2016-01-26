@@ -183,6 +183,7 @@ def main():
         curr_strand = curr_3UTR_structure[3] #strand
         UTR_pos = curr_3UTR_structure[4] #UTR position information
         pA_site = curr_3UTR_structure[5].split('|') #pA_site list
+        pA_site = list(map(int,pA_site))
 
         #If gene names exist in coverage dict(for each gene)
         if curr_3UTR_id in All_samples_Target_3UTR_coverages:
@@ -213,15 +214,14 @@ def main():
             
             #De novo identification of APA event for each 3UTR region
             curr_3UTR_all_samples_bp_coverage = np.array(curr_3UTR_all_samples_bp_coverage)
-            select_mean_squared_error, selected_break_point, UTR_abundance = De_Novo_3UTR_all_samples_bp_extimation(curr_3UTR_all_samples_bp_coverage,
-                                                                                                                    region_start,
-                                                                                                                    region_end,
-                                                                                                                    curr_strand,
-                                                                                                                    All_sample_coverage_weights,
-                                                                                                                    Coverage_pPAS_cutoff,
-                                                                                                                    test_name) 
-            #coverage_comparison_with_pA_site(curr_3UTR_all_samples_bp_coverage,region_start,region_end,curr_strand,All_sample_coverage_weights,
-            #                                 Coverage_pPAS_cutoff,pA_site,test_name)
+            #select_mean_squared_error, selected_break_point, UTR_abundance = De_Novo_3UTR_all_samples_bp_extimation(curr_3UTR_all_samples_bp_coverage,
+            #                                                                                                        region_start,
+            #                                                                                                        region_end,
+            #                                                                                                        curr_strand,
+            #                                                                                                        All_sample_coverage_weights,
+            #                                                                                                        Coverage_pPAS_cutoff,
+            #                                                                                                        test_name) 
+            coverage_comparison_with_pA_site(curr_3UTR_all_samples_bp_coverage, curr_3UTR_all_samples_bp_chrom_site, region_start, region_end, curr_strand, All_sample_coverage_weights, Coverage_pPAS_cutoff, pA_site,test_name)
 
 if __name__ == '__main__':
     '''The identification of alternative polyadenylation sites 

@@ -3,26 +3,89 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
-def coverage_comparison_with_pA_site(All_Samples_curr_3UTR_coverages, UTR_start, UTR_end, curr_strand, weight_for_second_coverage, Coverage_pPAS_cutoff, pA_site, test_name):
+
+def Define_UTR_search_region(UTR_start_site, UTR_end_site, curr_strand, UTR_end_list):
+    #Define 3'end site from pA_site and 3'end infromation from RefSeq(or the other transcriptome DB)
+    UTR_search_region = []
+    if curr_strand == '+':
+        if UTR_start_site < UTR_end_list[0]:
+            UTR_end_list.insert(0,UTR_start_site)
+        if UTR_end_list[-1] < UTR_end_site:
+            if (UTR_end_site - UTR_end_list[-1]) <= 200: #Remove pA site near 3'end(Default: 50bp)
+                UTR_end_list[-1] = UTR_end_site
+            else:
+                UTR_end_list.append(UTR_end_site)
+    elif curr_strand == '-':
+        if UTR_start_site < UTR_end_list[0]:
+            if (UTR_end_list[0] - UTR_start_site) <= 200: #Remove pA site near 3'end(Default: 50bp)
+                UTR_end_list[0] = UTR_start_site
+            else:
+                UTR_end_list.insert(0,UTR_start_site)
+        if UTR_end_list[-1] < UTR_end_site:
+            UTR_end_list.append(UTR_end_site)
+
+    if curr_strand == '+':
+        UTR_end_list = UTR_end_list[::-1]
+    elif curr_strand == '-':
+        pass
+
+    #Remove pA_site near the other pA_site(Default: >=150bp)
+    ###TEST(Strand:-): UTR_end_list = [1,200,400,450,600,800,850,890,1000]
+    ###*      *      -   *        *    -   -   -    *  check
+    ###|      |      |   |        |    |   |   |    |
+    ###1     200    400 450      600  800 850 890 1000 chrom_site
+
+    ###TEST(Strand:+): UTR_end_list = [1000,800,610,550,500,300,1]
+    ###  *       *      -   -   *      *        * check
+    ###  |       |      |   |   |      |        |
+    ###1000     800    610 550 500    300       1 chrom_site
+    UTR_end_list_filtered = [UTR_end_list[x] for x in range(len(UTR_end_list)) if UTR_end_list[x] == UTR_end_list[-1] or abs(UTR_end_list[x+1] - UTR_end_list[x] + 1) >= 150]
+
+    #Reverse a list (if curr_stand is '-')
+    if curr_strand == '+':
+        UTR_end_list_filtered = UTR_end_list_filtered[::-1]
+    elif curr_strand == '-':
+        UTR_end_list_filtered = UTR_end_list_filtered[::-1]
+
+    #Make triple dataset
+    #UTR_end_list = [10,20,30,40,45]
+    #UTR_start_site = 0
+    #UTR_end_site = 50
+    #UTR_search_region: [[0, 10, 20], [10, 20, 30], [20, 30, 40], [30, 40, 50]]
+    for x in range(len(UTR_end_list_filtered)-2):
+        if curr_strand == '+':
+            first = UTR_end_list_filtered[x]
+            middle = UTR_end_list_filtered[x+1]
+            last = UTR_end_list_filtered[x+2]
+        elif curr_strand == '-':
+            first = UTR_end_list_filtered[x]
+            middle = UTR_end_list_filtered[x+1]
+            last = UTR_end_list_filtered[x+2]
+        UTR_search_region.append([first,middle,last])
+    return UTR_search_region
+
+
+def coverage_comparison_with_pA_site(curr_3UTR_all_samples_bp_coverage, curr_3UTR_all_samples_bp_chrom_site, UTR_start, UTR_end, curr_strand, weight_for_second_coverage, Coverage_pPAS_cutoff, pA_site, test_name):
     ###For each gene###
     #Parameter setting
     coverage_threshold = Coverage_pPAS_cutoff #Depth(Coverage) threshold in 5'end of last exon
-    search_point_start = 200
-    search_point_end = 200
+    search_point_start = 100
+    search_point_end = 100
     coverage_test_region = 100 #testing 0-100bp in 5'end of last exon
     least_3UTR_length = 500 #>=150bp 3'UTR length are needed
+    least_search_region_coverage = 5 #>=5 coverage are needed in search region
 
     #The number of samples
-    num_samples = len(All_Samples_curr_3UTR_coverages)
+    num_samples = len(curr_3UTR_all_samples_bp_coverage)
 
     #Read coverage for each sample(List)
-    Region_Coverages = [] #1bp coverage
-    Region_mean_Coverages = [] #Mean of coverage
-    Region_first_100_coverage_all_samples = [] #Mean of coverage in 100bp region (5'end last exon)
+    Region_Coverages = [] #1bp coverage (Normalized)
+    Region_mean_Coverages = [] #Mean of coverage (Raw)
+    Region_first_100_coverage_all_samples = [] #Mean of coverage in 100bp region (5'end last exon) (Raw)
 
     #Prepare coverage information for each sample
     for i in range(num_samples):
-        curr_Region_Coverage_raw = All_Samples_curr_3UTR_coverages[i] #Strand is reversed in load
+        curr_Region_Coverage_raw = curr_3UTR_all_samples_bp_coverage[i] #Strand is reversed in load
         curr_Region_Coverage = curr_Region_Coverage_raw / weight_for_second_coverage[i] #bp_Coverage in 3UTR region for each sample
 
         Region_mean_Coverages.append(np.mean(curr_Region_Coverage_raw)) #Mean of coverage
@@ -34,38 +97,114 @@ def coverage_comparison_with_pA_site(All_Samples_curr_3UTR_coverages, UTR_start,
     #Filtering coverage threshold(Default: >=5 coverage / >=150bp 3UTR length)
     if sum(np.array(Region_first_100_coverage_all_samples) >= coverage_threshold) >= num_samples and (UTR_end - UTR_start) >= least_3UTR_length:
         #Prepare UTR search region
-        UTR_start_site = UTR_start - 1
-        UTR_end_site = UTR_end
-
+        UTR_start_site = int(UTR_start) #UTR_start is '1-base'.
+        UTR_end_site = int(UTR_end)
         UTR_end_list = pA_site
-        #TEST:
-        #UTR_end_list = [10,20,30,40,45]
-        #UTR_start_site = 0
-        #UTR_end_site = 50
-        #UTR_search_region: [[0, 10, 20], [10, 20, 30], [20, 30, 40], [30, 40, 50]]
-        UTR_search_region = []
-        if curr_strand == '+':
-            if UTR_start_site < UTR_end_list[0]:
-                UTR_end_list.insert(0,UTR_start_site)
-            if UTR_end_list[-1] < UTR_end_site:
-                if (UTR_end_site - UTR_end_list[-1]) <= 50: #Remove pA site near 3'end(Default: 50bp)
-                    UTR_end_list[-1] = UTR_end_site
-                else:
-                    UTR_end_list.append(UTR_end_site)
-        elif curr_strand == '-':
-            if UTR_start_site < UTR_end_list[0]:
-                if (UTR_end_list[0]- UTR_start_site) <= 50: #Remove pA site near 3'end(Default: 50bp)
-                    UTR_end_list[0] = UTR_start_site
-                else:
-                    UTR_end_list.insert(0,UTR_start_site)
-            if UTR_end_list[-1] < UTR_end_site:
-                UTR_end_list.append(UTR_end_site)
 
-        for x in range(len(UTR_end_list)-2):
-            first = UTR_end_list[x]
-            middle = UTR_end_list[x+1]
-            last = UTR_end_list[x+2]
-            UTR_search_region.append([first,middle,last])
+        #Define UTR search region
+        UTR_search_region = Define_UTR_search_region(UTR_start_site, UTR_end_site, curr_strand, UTR_end_list)
+        print(UTR_search_region)
+
+        #Estimate_each_sample
+        flg = 0 #TODO: TEST:
+        for curr_3UTR_curr_sample_bp_coverage in curr_3UTR_all_samples_bp_coverage:
+            Estimate_break_point(curr_3UTR_curr_sample_bp_coverage, UTR_search_region, UTR_start_site, UTR_end_site, curr_strand, search_point_start, search_point_end, least_search_region_coverage, test_name, flg)
+            flg = 1 #TODO: TEST:
+
+def Estimate_break_point(curr_3UTR_curr_sample_bp_coverage, UTR_search_region, UTR_start_site, UTR_end_site, curr_strand, search_point_start, search_point_end, least_search_region_coverage, test_name, flg):
+    for curr_UTR_search_region in UTR_search_region:
+        #Initialize variance and estimated 3'UTR abundance lists
+        #Initialize break point infor list
+        curr_mean_variance_list = []
+        curr_estimated_3UTR_abundance_list = []
+
+        #Define UTR coverage for each UTR search region
+        curr_UTR_search_coverage = []
+        search_region_length = 0
+        if curr_strand == '+':
+            start_site = curr_UTR_search_region[0] - UTR_start_site
+            end_site = curr_UTR_search_region[2] - UTR_start_site + 1 + 1 #length(end-start)+1, slicing
+            curr_UTR_search_coverage = curr_3UTR_curr_sample_bp_coverage[start_site:end_site]
+            search_region_length = end_site - start_site
+            print(start_site,end_site,search_region_length)
+        elif curr_strand == '-':
+            start_site = abs(curr_UTR_search_region[0] - UTR_end_site)
+            end_site = abs(curr_UTR_search_region[2] - UTR_end_site) + 1 + 1 #length(end-start)+1, slicing
+            curr_UTR_search_coverage = curr_3UTR_curr_sample_bp_coverage[start_site:end_site]
+            search_region_length = end_site - start_site
+            print(start_site,end_site,search_region_length)
+
+        #Define coverage variance search region #TEST: 1-700bp(Index: 0-699)/700bp length => Index: 100:600(101-600bp)
+        start_site_for_coverage_variance_search = search_point_start #Index: 100
+        end_site_for_coverage_variance_search = search_region_length - search_point_end #Index: 600
+
+        #Initiate a list of results for each sample
+        curr_region_result = [ [], [], [] ] # Mean_squared_error | Long_UTR_coverage | Short_UTR_coverage
+
+        #Check mean squared error(variance) in search region
+        for curr_point in range(start_site_for_coverage_variance_search, end_site_for_coverage_variance_search):
+            curr_break_point = curr_point #Current base-pair on 3UTR region for checking
+
+            #Testing coverage variance for each base-pair(bp)
+            Mean_squared_error = 0
+            Long_UTR_coverage = 0
+            Short_UTR_coverage = 0
+            Mean_squared_error, Long_UTR_coverage, Short_UTR_coverage = Estimate_variance(curr_UTR_search_coverage, curr_break_point)
+            #if Mean_squared_error is None:
+            #    continue
+            #else:
+            curr_region_result[0].append(Mean_squared_error)
+            curr_region_result[1].append(Long_UTR_coverage)
+            curr_region_result[2].append(Short_UTR_coverage)
+
+        #TODO: TEST: Mean_squared_error in 3'UTR region for PTEN, ELAVL1
+        name = 'CTRL'
+        if flg == 1:
+            name = 'CFIm25KD'
+        plt.plot(curr_region_result[0])
+        #plt.show()
+        filename = "data/output_variance_" + test_name + '_' + name + '_' + str(curr_UTR_search_region[0]) + "-" + str(curr_UTR_search_region[2]) + ".png"
+        plt.savefig(filename)
+        plt.close()
+
+        #Identify index of min mean squared error in curr_region_result[0]
+        min_MSE_index = curr_region_result[0].index(min(curr_region_result[0])) #Break point
+        break_point_chrom_site = 0
+        if curr_strand == '+':
+            break_point_chrom_site = curr_UTR_search_region[0] + min_MSE_index + search_point_start
+        elif curr_strand == '-':
+            break_point_chrom_site = curr_UTR_search_region[0] - min_MSE_index - search_point_start
+        break_point_long_UTR_coverage = curr_region_result[1][min_MSE_index]
+        break_point_short_UTR_coverage = curr_region_result[2][min_MSE_index]
+
+        #CHECK: 
+        if break_point_short_UTR_coverage >= least_search_region_coverage and break_point_short_UTR_coverage > break_point_long_UTR_coverage:
+            res = break_point_short_UTR_coverage - break_point_long_UTR_coverage
+            dev = break_point_short_UTR_coverage / break_point_long_UTR_coverage
+            print(break_point_chrom_site, break_point_short_UTR_coverage, break_point_long_UTR_coverage, res, dev)
+        else:
+            print("NG!!")
+
+            
+def Estimate_variance(curr_UTR_search_coverage, curr_break_point):
+    search_coverage_long = np.array(curr_UTR_search_coverage[curr_break_point:])
+    search_coverage_short = np.array(curr_UTR_search_coverage[0:curr_break_point])
+
+    #Calculate mean of coverage(Long/Short UTR)
+    Long_UTR_coverage = np.mean(search_coverage_long)
+    Short_UTR_coverage = np.mean(search_coverage_short)
+
+    #if Short_UTR_coverage > Long_UTR_coverage:
+    search_coverage_long_residual = search_coverage_long - Long_UTR_coverage
+    search_coverage_short_residual = search_coverage_short - Short_UTR_coverage
+
+    coverage_residual = search_coverage_long_residual
+    coverage_residual = np.append(coverage_residual, search_coverage_short_residual)
+    Mean_squared_error = np.mean(coverage_residual**2)
+    
+    return Mean_squared_error, Long_UTR_coverage, Short_UTR_coverage
+    #else:
+    #    return None, None, None #Null objects
 
 def De_Novo_3UTR_all_samples_bp_extimation(All_Samples_curr_3UTR_coverages, UTR_start, UTR_end, curr_strand, weight_for_second_coverage, Coverage_pPAS_cutoff, test_name):
     ###For each gene###
