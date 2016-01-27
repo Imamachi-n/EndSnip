@@ -224,6 +224,8 @@ def main():
             #coverage_comparison_with_pA_site(curr_3UTR_all_samples_bp_coverage, curr_3UTR_all_samples_bp_chrom_site, region_start, region_end, curr_strand, All_sample_coverage_weights, Coverage_pPAS_cutoff, pA_site,test_name)
             de_novo_coverage_comparison_with_windows(curr_3UTR_all_samples_bp_coverage, curr_3UTR_all_samples_bp_chrom_site, region_start, region_end, curr_strand, All_sample_coverage_weights, Coverage_pPAS_cutoff, pA_site,test_name)
 
+    now_time("Completely finished!!")
+
 if __name__ == '__main__':
     '''The identification of alternative polyadenylation sites 
        with RNA-seq, 3'-seq and poly(A) site database.

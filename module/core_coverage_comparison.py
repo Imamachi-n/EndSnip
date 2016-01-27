@@ -184,10 +184,15 @@ def Estimate_break_point(curr_3UTR_curr_sample_bp_coverage, UTR_search_region, U
                 res = break_point_short_UTR_coverage - break_point_long_UTR_coverage
                 dev = break_point_short_UTR_coverage / break_point_long_UTR_coverage
                 print(break_point_chrom_site, break_point_short_UTR_coverage, break_point_long_UTR_coverage, res, dev)
+
+                #Append Chrom sites of break point candidates
+                break_point_candidates.append(break_point_chrom_site)
             else:
                 print("NG!!")
         else:
             print("NG!!")
+
+    return break_point_candidates
             
 def Estimate_variance(curr_UTR_search_coverage, curr_break_point):
     search_coverage_long = np.array(curr_UTR_search_coverage[curr_break_point:])
@@ -287,8 +292,19 @@ def de_novo_coverage_comparison_with_windows(curr_3UTR_all_samples_bp_coverage, 
         #Estimate_each_sample
         flg = 0 #TODO: TEST:
         for curr_3UTR_curr_sample_bp_coverage in curr_3UTR_all_samples_bp_coverage:
-            Estimate_break_point(curr_3UTR_curr_sample_bp_coverage, UTR_search_region, UTR_start_site, UTR_end_site, curr_strand, search_point_start, search_point_end, least_search_region_coverage, test_name, flg)
+            break_point_candidates = Estimate_break_point(curr_3UTR_curr_sample_bp_coverage, UTR_search_region, UTR_start_site, UTR_end_site, curr_strand, search_point_start, search_point_end, least_search_region_coverage, test_name, flg)
+
+            if curr_strand == '-':
+                break_point_candidates = break_point_candidates[::-1]
+            print(break_point_candidates)
+
+            #ReEstimate break points
+            updated_UTR_search_region = Define_UTR_search_region(UTR_start_site, UTR_end_site, curr_strand, break_point_candidates)
+            print(updated_UTR_search_region)
+            updated_break_point_candidates = Estimate_break_point(curr_3UTR_curr_sample_bp_coverage, updated_UTR_search_region, UTR_start_site, UTR_end_site, curr_strand, search_point_start, search_point_end, least_search_region_coverage, test_name, flg)
+
             flg = 1 #TODO: TEST:
+
 
 def coverage_comparison_with_pA_site(curr_3UTR_all_samples_bp_coverage, curr_3UTR_all_samples_bp_chrom_site, UTR_start, UTR_end, curr_strand, weight_for_second_coverage, Coverage_pPAS_cutoff, pA_site, test_name):
     ###For each gene###
