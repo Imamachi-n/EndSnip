@@ -22,7 +22,7 @@ import numpy as np
 ###Custom modules
 from module.utils_others import now_time, Input_config_file
 from module.core_load_wig_files import Load_Target_Wig_files, Convert_wig_into_bp_coverage
-from module.core_coverage_comparison import De_Novo_3UTR_all_samples_bp_extimation, Estimation_abundance, coverage_comparison_with_pA_site
+from module.core_coverage_comparison import De_Novo_3UTR_all_samples_bp_extimation, Estimation_abundance, coverage_comparison_with_pA_site, de_novo_coverage_comparison_with_windows
 
 ###Modules for testing
 import matplotlib.pyplot as plt
@@ -221,7 +221,8 @@ def main():
             #                                                                                                        All_sample_coverage_weights,
             #                                                                                                        Coverage_pPAS_cutoff,
             #                                                                                                        test_name) 
-            coverage_comparison_with_pA_site(curr_3UTR_all_samples_bp_coverage, curr_3UTR_all_samples_bp_chrom_site, region_start, region_end, curr_strand, All_sample_coverage_weights, Coverage_pPAS_cutoff, pA_site,test_name)
+            #coverage_comparison_with_pA_site(curr_3UTR_all_samples_bp_coverage, curr_3UTR_all_samples_bp_chrom_site, region_start, region_end, curr_strand, All_sample_coverage_weights, Coverage_pPAS_cutoff, pA_site,test_name)
+            de_novo_coverage_comparison_with_windows(curr_3UTR_all_samples_bp_coverage, curr_3UTR_all_samples_bp_chrom_site, region_start, region_end, curr_strand, All_sample_coverage_weights, Coverage_pPAS_cutoff, pA_site,test_name)
 
 if __name__ == '__main__':
     '''The identification of alternative polyadenylation sites 
