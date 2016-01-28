@@ -242,7 +242,7 @@ def Evaluate_break_point(curr_UTR_search_coverage, min_MSE_index, search_point_s
     #search_coverage_residual_long = (search_coverage_long - search_coverage_mean_long)
     #search_coverage_residual_short = (search_coverage_short - search_coverage_mean_short)
 
-    if div_median >= 2: #TODO: LongUTRとShortUTRの差異に関して、Criteriaをどうするか決める。
+    if div_median >= 1.5: #TODO: LongUTRとShortUTRの差異に関して、Criteriaをどうするか決める。
         return True
     else:
         return False
@@ -289,19 +289,50 @@ def de_novo_coverage_comparison_with_windows(curr_3UTR_all_samples_bp_coverage, 
         UTR_search_region = De_novo_UTR_search_region(UTR_start, UTR_end, curr_strand, search_region_distance)
         print(UTR_search_region)
 
+        #Initialize break point infor list
+        gathered_break_point = []
+
         #Estimate_each_sample
         flg = 0 #TODO: TEST:
         for curr_3UTR_curr_sample_bp_coverage in curr_3UTR_all_samples_bp_coverage:
             break_point_candidates = Estimate_break_point(curr_3UTR_curr_sample_bp_coverage, UTR_search_region, UTR_start_site, UTR_end_site, curr_strand, search_point_start, search_point_end, least_search_region_coverage, test_name, flg)
 
+            #ReEstimate break points
             if curr_strand == '-':
                 break_point_candidates = break_point_candidates[::-1]
             print(break_point_candidates)
 
-            #ReEstimate break points
             updated_UTR_search_region = Define_UTR_search_region(UTR_start_site, UTR_end_site, curr_strand, break_point_candidates)
             print(updated_UTR_search_region)
             updated_break_point_candidates = Estimate_break_point(curr_3UTR_curr_sample_bp_coverage, updated_UTR_search_region, UTR_start_site, UTR_end_site, curr_strand, search_point_start, search_point_end, least_search_region_coverage, test_name, flg)
+            print("Updated_break_point_candidates")
+            print(updated_break_point_candidates)
+
+            #Near <=200bp break points => ReEstimate
+            updated_break_point_candidates_testing = []
+            test_dataset = updated_break_point_candidates[:]
+            if curr_strand == '+':
+                test_dataset.append(UTR_end)
+                updated_break_point_candidates_testing = [test_dataset[x+1]-test_dataset[x]+1 for x in range(len(test_dataset)-1)]
+                print(updated_break_point_candidates_testing)
+            elif curr_strand == '-':
+                test_dataset.append(UTR_start)
+                updated_break_point_candidates_testing = [abs(test_dataset[x+1]-test_dataset[x])+1 for x in range(len(test_dataset)-1)]
+                print(updated_break_point_candidates_testing)
+            
+            #print(sum(np.array(updated_break_point_candidates_testing) >= 200))
+            #print(len(updated_break_point_candidates))
+            if sum(np.array(updated_break_point_candidates_testing) >= 200) < len(updated_break_point_candidates):
+                print("Retry...")
+                if curr_strand == '-':
+                    updated_break_point_candidates = updated_break_point_candidates[::-1]
+                updated_UTR_search_region = Define_UTR_search_region(UTR_start_site, UTR_end_site, curr_strand, updated_break_point_candidates)
+                updated_break_point_candidates = Estimate_break_point(curr_3UTR_curr_sample_bp_coverage, updated_UTR_search_region, UTR_start_site, UTR_end_site, curr_strand, search_point_start, search_point_end, least_search_region_coverage, test_name, flg)
+                print("Retry: Updated_break_point_candidates")
+                print(updated_break_point_candidates)
+
+            #Save updated break points
+            gathered_break_point.append(updated_break_point_candidates)
 
             flg = 1 #TODO: TEST:
 
