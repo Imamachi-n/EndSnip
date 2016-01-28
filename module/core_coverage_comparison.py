@@ -6,31 +6,7 @@ import scipy.stats
 import matplotlib.pyplot as plt
 
 
-def Define_UTR_search_region(UTR_start_site, UTR_end_site, curr_strand, UTR_end_list):
-    #Define 3'end site from pA_site and 3'end infromation from RefSeq(or the other transcriptome DB)
-    UTR_search_region = []
-    if curr_strand == '+':
-        if UTR_start_site < UTR_end_list[0]:
-            UTR_end_list.insert(0,UTR_start_site)
-        if UTR_end_list[-1] < UTR_end_site:
-            if (UTR_end_site - UTR_end_list[-1]) <= 200: #Remove pA site near 3'end(Default: 50bp)
-                UTR_end_list[-1] = UTR_end_site
-            else:
-                UTR_end_list.append(UTR_end_site)
-    elif curr_strand == '-':
-        if UTR_start_site < UTR_end_list[0]:
-            if (UTR_end_list[0] - UTR_start_site) <= 200: #Remove pA site near 3'end(Default: 50bp)
-                UTR_end_list[0] = UTR_start_site
-            else:
-                UTR_end_list.insert(0,UTR_start_site)
-        if UTR_end_list[-1] < UTR_end_site:
-            UTR_end_list.append(UTR_end_site)
-
-    if curr_strand == '+':
-        UTR_end_list = UTR_end_list[::-1]
-    elif curr_strand == '-':
-        pass
-
+def UTR_end_list_filtering_forward(UTR_end_list):
     #Remove pA_site near the other pA_site(Default: >=150bp)
     ###TEST(Strand:-): UTR_end_list = [1,200,400,450,600,800,850,890,1000]
     ###*      *      -   *        *    -   -   -    *  check
@@ -41,7 +17,8 @@ def Define_UTR_search_region(UTR_start_site, UTR_end_site, curr_strand, UTR_end_
     ###  *       *      -   -   *      *        * check
     ###  |       |      |   |   |      |        |
     ###1000     800    610 550 500    300       1 chrom_site
-    UTR_end_list_filtered = [UTR_end_list[x] for x in range(len(UTR_end_list)) if UTR_end_list[x] == UTR_end_list[-1] or abs(UTR_end_list[x+1] - UTR_end_list[x] + 1) >= 150]
+    UTR_end_list_filtered = [UTR_end_list[x] for x in range(len(UTR_end_list)) if UTR_end_list[x] == UTR_end_list[-2] or UTR_end_list[x] == UTR_end_list[-1] or abs(UTR_end_list[x+1] - UTR_end_list[x]) + 1 >= 200] #TODO: 150-200bpのどの長さがよいか検討。
+    # UTR_start(UTR_end_list[-1]) & first pA_site(UTR_end_list[-2]) are absolutely reserved in UTR_end_list_filtered list.
 
     #Reverse a list (if curr_stand is '-')
     if curr_strand == '+':
@@ -64,6 +41,93 @@ def Define_UTR_search_region(UTR_start_site, UTR_end_site, curr_strand, UTR_end_
             middle = UTR_end_list_filtered[x+1]
             last = UTR_end_list_filtered[x+2]
         UTR_search_region.append([first,middle,last])
+    return UTR_search_region
+
+def UTR_end_list_filtering_backward(UTR_end_list):
+    UTR_end_list = UTR_end_list[::-1]
+    UTR_end_list_filtered = [UTR_end_list[x] for x in range(len(UTR_end_list)) if UTR_end_list[x] == UTR_end_list[0] or (UTR_end_list[x] == UTR_end_list[-1] and abs(UTR_end_list[-2] - UTR_end_list[-1]) + 1 >= 200) or abs(UTR_end_list[x+1] - UTR_end_list[x]) + 1 >= 200]
+    UTR_end_list_filtered = UTR_end_list_filtered[::-1]
+
+    #Reverse a list (if curr_stand is '-')
+    if curr_strand == '+':
+        UTR_end_list_filtered = UTR_end_list_filtered[::-1]
+    elif curr_strand == '-':
+        UTR_end_list_filtered = UTR_end_list_filtered[::-1]
+
+    #Make triple dataset
+    #UTR_end_list = [10,20,30,40,45]
+    #UTR_start_site = 0
+    #UTR_end_site = 50
+    #UTR_search_region: [[0, 10, 20], [10, 20, 30], [20, 30, 40], [30, 40, 50]]
+    for x in range(len(UTR_end_list_filtered)-2):
+        if curr_strand == '+':
+            first = UTR_end_list_filtered[x]
+            middle = UTR_end_list_filtered[x+1]
+            last = UTR_end_list_filtered[x+2]
+        elif curr_strand == '-':
+            first = UTR_end_list_filtered[x]
+            middle = UTR_end_list_filtered[x+1]
+            last = UTR_end_list_filtered[x+2]
+        UTR_search_region.append([first,middle,last])
+    return UTR_search_region
+
+def Define_UTR_search_region_clustering(UTR_end_list):
+    #UTR_end_list = [1, 201, 300, 600, 1000, 1500, 1600]
+    #[1 | 201, 300 | 600 | 1000 | 1500, 1600]
+    #[ [1, 0, 600], [300, 0, 1000], [600, 0, 1500] ]
+    test_list = []
+    flg = 1
+    for x in range(len(UTR_end_list)-1):  
+        if x == 0:
+            test_list.append(flg)
+        elif abs(UTR_end_list[x+1] - UTR_end_list[x])+1 >= 200:
+            test_list.append(flg)
+        else:
+            pass
+        flg += 1
+    test_list.insert(0,0)
+    test_list.append(len(UTR_end_list)) #[0, 1, 3, 4, 5, 7]
+    test_index = [[test_list[x],test_list[x+1]] for x in range(len(test_list)-1)] #[[0, 1], [1, 3], [3, 4], [4, 5], [5, 7]]
+    UTR_end_list_clustering = [UTR_end_list[test_index[x][0]:test_index[x][1]] for x in range(len(test_index))] #[[1], [201, 300], [600], [1000], [1500, 1600]]
+    UTR_search_region = [[UTR_end_list_clustering[x][-1],0,UTR_end_list_clustering[x+2][0]] for x in range(len(UTR_end_list_clustering)-2)] #[[1, 0, 600], [300, 0, 1000], [600, 0, 1500]]
+    return UTR_search_region
+
+
+def Define_UTR_search_region(UTR_start_site, UTR_end_site, curr_strand, UTR_end_list):
+    #Define 3'end site from pA_site and 3'end infromation from RefSeq(or the other transcriptome DB)
+    UTR_search_region = []
+    #if curr_strand == '+':
+    #    if UTR_start_site < UTR_end_list[0]:
+    #        UTR_end_list.insert(0,UTR_start_site)
+    #    if UTR_end_list[-1] < UTR_end_site:
+    #        if (UTR_end_site - UTR_end_list[-1]) <= 200: #Remove pA site near 3'end(Default: 50bp)
+    #            UTR_end_list[-1] = UTR_end_site
+    #        else:
+    #            UTR_end_list.append(UTR_end_site)
+    #elif curr_strand == '-':
+    #    if UTR_start_site < UTR_end_list[0]:
+    #        if (UTR_end_list[0] - UTR_start_site) <= 200: #Remove pA site near 3'end(Default: 50bp)
+    #            UTR_end_list[0] = UTR_start_site
+    #        else:
+    #            UTR_end_list.insert(0,UTR_start_site)
+    #    if UTR_end_list[-1] < UTR_end_site:
+    #        UTR_end_list.append(UTR_end_site)
+
+    #if curr_strand == '+':
+    #    UTR_end_list = UTR_end_list[::-1]
+    #elif curr_strand == '-':
+    #    pass
+
+    if curr_strand == '+':
+        UTR_end_list.insert(0,UTR_start_site)
+        UTR_end_list.append(UTR_end_site)
+    elif curr_strand == '-':
+        UTR_end_list.insert(0,UTR_end_site)
+        UTR_end_list.append(UTR_start_site)
+
+    #UTR_search_region = UTR_end_list_filtering_backward(UTR_end_list)
+    UTR_search_region = Define_UTR_search_region_clustering(UTR_end_list)
+    
     return UTR_search_region
 
 
@@ -178,7 +242,7 @@ def Estimate_break_point(curr_3UTR_curr_sample_bp_coverage, UTR_search_region, U
         #CHECK: 
         if break_point_short_UTR_coverage >= least_search_region_coverage and break_point_short_UTR_coverage > break_point_long_UTR_coverage:
             #Evaluate difference between short and long 3UTR(Default: At least 2-fold changed)
-            Evaluation_result = Evaluate_break_point(curr_UTR_search_coverage, min_MSE_index, search_point_start, search_point_end, curr_strand)
+            Evaluation_result = Check_break_point(curr_UTR_search_coverage, min_MSE_index, search_point_start, search_point_end, curr_strand)
 
             if Evaluation_result:
                 res = break_point_short_UTR_coverage - break_point_long_UTR_coverage
@@ -214,7 +278,7 @@ def Estimate_variance(curr_UTR_search_coverage, curr_break_point):
     #else:
     #    return None, None, None #Null objects
 
-def Evaluate_break_point(curr_UTR_search_coverage, min_MSE_index, search_point_start, search_point_end, curr_strand):
+def Check_break_point(curr_UTR_search_coverage, min_MSE_index, search_point_start, search_point_end, curr_strand):
     best_break_point = min_MSE_index + search_point_start + 1 #Slicing
     #print(best_break_point)
 
@@ -295,8 +359,10 @@ def de_novo_coverage_comparison_with_windows(curr_3UTR_all_samples_bp_coverage, 
         #Estimate_each_sample
         flg = 0 #TODO: TEST:
         for curr_3UTR_curr_sample_bp_coverage in curr_3UTR_all_samples_bp_coverage:
+            ###STEP1:
             break_point_candidates = Estimate_break_point(curr_3UTR_curr_sample_bp_coverage, UTR_search_region, UTR_start_site, UTR_end_site, curr_strand, search_point_start, search_point_end, least_search_region_coverage, test_name, flg)
 
+            ##STEP2:
             #ReEstimate break points
             if curr_strand == '-':
                 break_point_candidates = break_point_candidates[::-1]
@@ -308,6 +374,7 @@ def de_novo_coverage_comparison_with_windows(curr_3UTR_all_samples_bp_coverage, 
             print("Updated_break_point_candidates")
             print(updated_break_point_candidates)
 
+            ###STEP3: 
             #Near <=200bp break points => ReEstimate
             updated_break_point_candidates_testing = []
             test_dataset = updated_break_point_candidates[:]
@@ -327,15 +394,43 @@ def de_novo_coverage_comparison_with_windows(curr_3UTR_all_samples_bp_coverage, 
                 if curr_strand == '-':
                     updated_break_point_candidates = updated_break_point_candidates[::-1]
                 updated_UTR_search_region = Define_UTR_search_region(UTR_start_site, UTR_end_site, curr_strand, updated_break_point_candidates)
+                print(updated_UTR_search_region)
                 updated_break_point_candidates = Estimate_break_point(curr_3UTR_curr_sample_bp_coverage, updated_UTR_search_region, UTR_start_site, UTR_end_site, curr_strand, search_point_start, search_point_end, least_search_region_coverage, test_name, flg)
                 print("Retry: Updated_break_point_candidates")
                 print(updated_break_point_candidates)
+            else: #TEST:
+                print("If Retry...")
+                if curr_strand == '-':
+                    updated_break_point_candidates = updated_break_point_candidates[::-1]
+                updated_UTR_search_region = Define_UTR_search_region(UTR_start_site, UTR_end_site, curr_strand, updated_break_point_candidates)
+                print(updated_UTR_search_region)
+                updated_break_point_candidates = Estimate_break_point(curr_3UTR_curr_sample_bp_coverage, updated_UTR_search_region, UTR_start_site, UTR_end_site, curr_strand, search_point_start, search_point_end, least_search_region_coverage, test_name, flg)
+                print("Retry??: Updated_break_point_candidates")
+                print(updated_break_point_candidates)
 
             #Save updated break points
-            gathered_break_point.append(updated_break_point_candidates)
+            gathered_break_point.extend(updated_break_point_candidates)
 
             flg = 1 #TODO: TEST:
+        
+        #DIFF: Comarison of Control vs CFIm25 knockdown samples
+        #Sort gathered_break_points
+        gathered_break_point = sorted(gathered_break_point)
+        print(gathered_break_point)
 
+        #Prepare filtered UTR search regions
+        gathered_UTR_search_region = Define_UTR_search_region(UTR_start_site, UTR_end_site, curr_strand, gathered_break_point)
+        print('Gathered_UTR_search_region')
+        print(gathered_UTR_search_region)
+
+        #Estimate merged region coverage in all samples
+        merged_region_coverages = []
+        Region_Coverages_array = np.array(Region_Coverages)
+        merged_region_coverages = np.sum(Region_Coverages_array, axis=0)
+        print(merged_region_coverages)
+
+        break_point_for_diff = Estimate_break_point(merged_region_coverages, gathered_UTR_search_region, UTR_start_site, UTR_end_site, curr_strand, search_point_start, search_point_end, least_search_region_coverage, test_name, flg)
+        print(break_point_for_diff)
 
 def coverage_comparison_with_pA_site(curr_3UTR_all_samples_bp_coverage, curr_3UTR_all_samples_bp_chrom_site, UTR_start, UTR_end, curr_strand, weight_for_second_coverage, Coverage_pPAS_cutoff, pA_site, test_name):
     ###For each gene###
@@ -384,7 +479,9 @@ def coverage_comparison_with_pA_site(curr_3UTR_all_samples_bp_coverage, curr_3UT
             flg = 1 #TODO: TEST:
 
 
-
+########################################################################
+###OLD_SCRIPTS##########################################################
+########################################################################
 
 def De_Novo_3UTR_all_samples_bp_extimation(All_Samples_curr_3UTR_coverages, UTR_start, UTR_end, curr_strand, weight_for_second_coverage, Coverage_pPAS_cutoff, test_name):
     ###For each gene###
