@@ -73,6 +73,8 @@ def UTR_end_list_filtering_backward(UTR_end_list):
 
 def Define_UTR_search_region_clustering(UTR_end_list):
     #UTR_end_list = [1, 201, 300, 600, 1000, 1500, 1600]
+    #UTR_end_list = [89725044, 89725208, 89725774, 89726079, 89726202, 89726744, 89728093, 89728503, 89728544, 89731687]
+    #UTR_end_list = [8028691, 8028417, 8028340, 8027503, 8027341, 8027157, 8023457]
     #[1 | 201, 300 | 600 | 1000 | 1500, 1600]
     #[ [1, 0, 600], [300, 0, 1000], [600, 0, 1500] ]
     test_list = []
@@ -88,7 +90,9 @@ def Define_UTR_search_region_clustering(UTR_end_list):
     test_list.insert(0,0)
     test_list.append(len(UTR_end_list)) #[0, 1, 3, 4, 5, 7]
     test_index = [[test_list[x],test_list[x+1]] for x in range(len(test_list)-1)] #[[0, 1], [1, 3], [3, 4], [4, 5], [5, 7]]
+    #print(test_index)
     UTR_end_list_clustering = [UTR_end_list[test_index[x][0]:test_index[x][1]] for x in range(len(test_index))] #[[1], [201, 300], [600], [1000], [1500, 1600]]
+    #print(UTR_end_list_clustering)
     UTR_search_region = [[UTR_end_list_clustering[x][-1],0,UTR_end_list_clustering[x+2][0]] for x in range(len(UTR_end_list_clustering)-2)] #[[1, 0, 600], [300, 0, 1000], [600, 0, 1500]]
     return UTR_search_region
 
@@ -125,9 +129,20 @@ def Define_UTR_search_region(UTR_start_site, UTR_end_site, curr_strand, UTR_end_
         UTR_end_list.insert(0,UTR_end_site)
         UTR_end_list.append(UTR_start_site)
 
+    print(UTR_end_list)
     #UTR_search_region = UTR_end_list_filtering_backward(UTR_end_list)
     UTR_search_region = Define_UTR_search_region_clustering(UTR_end_list)
-    
+
+    #Consider Read length(single-end 36bp) #TODO: 3'endのだらだらしたすそ部分の影響を緩和する。
+    #UTR_search_region = [[8028691, 0, 8027503], [8028340, 0, 8023457]]
+    #read_length = 36
+    #if curr_strand == '+':
+    #    UTR_search_region_re = [[(three_set[0] + read_length), three_set[1], three_set[2]] for three_set in UTR_search_region if not three_set[0] == UTR_search_region[0][0]]
+    #    UTR_search_region_re.insert(0,UTR_search_region[0])
+    #elif curr_strand == '-':
+    #    UTR_search_region_re = [[(three_set[0] - read_length), three_set[1], three_set[2]] for three_set in UTR_search_region if not three_set[0] == UTR_search_region[0][0]]
+    #    UTR_search_region_re.insert(0,UTR_search_region[0])
+
     return UTR_search_region
 
 
@@ -313,7 +328,7 @@ def Check_break_point(curr_UTR_search_coverage, min_MSE_index, search_point_star
 
 
 ###MAIN###
-def de_novo_coverage_comparison_with_windows(curr_3UTR_all_samples_bp_coverage, curr_3UTR_all_samples_bp_chrom_site, UTR_start, UTR_end, curr_strand, weight_for_second_coverage, Coverage_pPAS_cutoff, pA_site, test_name):
+def de_novo_coverage_comparison_with_windows(curr_3UTR_all_samples_bp_coverage, curr_3UTR_all_samples_bp_chrom_site, UTR_start, UTR_end, curr_strand, weight_for_second_coverage, Coverage_pPAS_cutoff, pA_site, test_name, chrom, test_wig_output_file1, test_wig_output_file2):
     ###For each gene###
     #Parameter setting
     coverage_threshold = Coverage_pPAS_cutoff #Depth(Coverage) threshold in 5'end of last exon
@@ -361,13 +376,10 @@ def de_novo_coverage_comparison_with_windows(curr_3UTR_all_samples_bp_coverage, 
         for curr_3UTR_curr_sample_bp_coverage in curr_3UTR_all_samples_bp_coverage:
             ###STEP1:
             break_point_candidates = Estimate_break_point(curr_3UTR_curr_sample_bp_coverage, UTR_search_region, UTR_start_site, UTR_end_site, curr_strand, search_point_start, search_point_end, least_search_region_coverage, test_name, flg)
+            print(break_point_candidates)
 
             ##STEP2:
             #ReEstimate break points
-            if curr_strand == '-':
-                break_point_candidates = break_point_candidates[::-1]
-            print(break_point_candidates)
-
             updated_UTR_search_region = Define_UTR_search_region(UTR_start_site, UTR_end_site, curr_strand, break_point_candidates)
             print(updated_UTR_search_region)
             updated_break_point_candidates = Estimate_break_point(curr_3UTR_curr_sample_bp_coverage, updated_UTR_search_region, UTR_start_site, UTR_end_site, curr_strand, search_point_start, search_point_end, least_search_region_coverage, test_name, flg)
@@ -399,14 +411,13 @@ def de_novo_coverage_comparison_with_windows(curr_3UTR_all_samples_bp_coverage, 
                 print("Retry: Updated_break_point_candidates")
                 print(updated_break_point_candidates)
             else: #TEST:
-                print("If Retry...")
-                if curr_strand == '-':
-                    updated_break_point_candidates = updated_break_point_candidates[::-1]
-                updated_UTR_search_region = Define_UTR_search_region(UTR_start_site, UTR_end_site, curr_strand, updated_break_point_candidates)
-                print(updated_UTR_search_region)
-                updated_break_point_candidates = Estimate_break_point(curr_3UTR_curr_sample_bp_coverage, updated_UTR_search_region, UTR_start_site, UTR_end_site, curr_strand, search_point_start, search_point_end, least_search_region_coverage, test_name, flg)
-                print("Retry??: Updated_break_point_candidates")
-                print(updated_break_point_candidates)
+                pass
+                #print("If Retry...")
+                #updated_UTR_search_region = Define_UTR_search_region(UTR_start_site, UTR_end_site, curr_strand, updated_break_point_candidates)
+                #print(updated_UTR_search_region)
+                #updated_break_point_candidates = Estimate_break_point(curr_3UTR_curr_sample_bp_coverage, updated_UTR_search_region, UTR_start_site, UTR_end_site, curr_strand, search_point_start, search_point_end, least_search_region_coverage, test_name, flg)
+                #print("Retry??: Updated_break_point_candidates")
+                #print(updated_break_point_candidates)
 
             #Save updated break points
             gathered_break_point.extend(updated_break_point_candidates)
@@ -416,6 +427,8 @@ def de_novo_coverage_comparison_with_windows(curr_3UTR_all_samples_bp_coverage, 
         #DIFF: Comarison of Control vs CFIm25 knockdown samples
         #Sort gathered_break_points
         gathered_break_point = sorted(gathered_break_point)
+        if curr_strand == '-':
+            gathered_break_point = gathered_break_point[::-1]
         print(gathered_break_point)
 
         #Prepare filtered UTR search regions
@@ -431,6 +444,50 @@ def de_novo_coverage_comparison_with_windows(curr_3UTR_all_samples_bp_coverage, 
 
         break_point_for_diff = Estimate_break_point(merged_region_coverages, gathered_UTR_search_region, UTR_start_site, UTR_end_site, curr_strand, search_point_start, search_point_end, least_search_region_coverage, test_name, flg)
         print(break_point_for_diff)
+        
+        #Estimate multi-UTR coverage level
+        if curr_strand == '+':
+            break_point_for_diff.insert(0, UTR_start)
+            break_point_for_diff.append(UTR_end)
+        elif curr_strand == '-':
+            break_point_for_diff.insert(0, UTR_end)
+            break_point_for_diff.append(UTR_start)
+
+        flg_test = 0
+        for curr_3UTR_curr_sample_bp_coverage in curr_3UTR_all_samples_bp_coverage:
+            multi_UTR_coverage = Estimate_UTR_isoform_expression(curr_3UTR_curr_sample_bp_coverage, break_point_for_diff, curr_strand, chrom, test_wig_output_file1, test_wig_output_file2, flg_test)
+            print(multi_UTR_coverage)
+            flg_test = 1
+
+def Estimate_UTR_isoform_expression(curr_3UTR_curr_sample_bp_coverage, break_point_for_diff, curr_strand, chrom, test_wig_output_file1, test_wig_output_file2, flg_test):
+    #Prepare index for each UTR reion
+    start_site = break_point_for_diff[0]
+    UTR_segments = [[abs(break_point_for_diff[x]-start_site), abs(break_point_for_diff[x+1]-start_site)] for x in range(len(break_point_for_diff)-1)]
+    #[[0, 274], [274, 1290], [1290, 5234]]
+    if curr_strand == '+':
+        segments_chrom_site = [[break_point_for_diff[x], break_point_for_diff[x+1]] for x in range(len(break_point_for_diff)-1)]
+    elif curr_strand == '-':
+        segments_chrom_site = [[break_point_for_diff[x+1], break_point_for_diff[x]] for x in range(len(break_point_for_diff)-1)]
+    
+
+    #multi-UTR coverages(median) #TODO: UTRの発現量(Coverage)の計算をMedianで行ってよいか要検討。
+    multi_UTR_coverage = []
+    for x in range(len(UTR_segments)):
+        start_index = UTR_segments[x][0]
+        end_index = UTR_segments[x][1]
+        ###TEST:
+        start_chrom_site = segments_chrom_site[x][0]
+        end_chrom_site = segments_chrom_site[x][1]
+        curr_UTR_bp_coverage = np.array(curr_3UTR_curr_sample_bp_coverage[start_index:end_index])
+        curr_UTR_median_coverage = np.median(curr_UTR_bp_coverage)
+        if flg_test == 0: #siCTRL
+            print(chrom, start_chrom_site, end_chrom_site, curr_UTR_median_coverage, sep="\t", end="\n", file=test_wig_output_file1)
+        elif flg_test == 1: #siCFIm25
+            print(chrom, start_chrom_site, end_chrom_site, curr_UTR_median_coverage, sep="\t", end="\n", file=test_wig_output_file2)
+        multi_UTR_coverage.append(curr_UTR_median_coverage)
+
+    return multi_UTR_coverage
+
 
 def coverage_comparison_with_pA_site(curr_3UTR_all_samples_bp_coverage, curr_3UTR_all_samples_bp_chrom_site, UTR_start, UTR_end, curr_strand, weight_for_second_coverage, Coverage_pPAS_cutoff, pA_site, test_name):
     ###For each gene###
