@@ -327,6 +327,41 @@ def Check_break_point(curr_UTR_search_coverage, min_MSE_index, search_point_star
         return False
 
 
+def Estimate_UTR_isoform_expression(curr_3UTR_curr_sample_bp_coverage, break_point_for_diff, curr_strand, chrom, test_wig_output_file1, test_wig_output_file2, flg_test):
+    #Prepare index for each UTR region
+    start_site = break_point_for_diff[0]
+    UTR_segments = [[abs(break_point_for_diff[x]-start_site), abs(break_point_for_diff[x+1]-start_site)] for x in range(len(break_point_for_diff)-1)]
+    #[[0, 274], [274, 1290], [1290, 5234]]
+    if curr_strand == '+':
+        segments_chrom_site = [[break_point_for_diff[x], break_point_for_diff[x+1]] for x in range(len(break_point_for_diff)-1)]
+    elif curr_strand == '-':
+        segments_chrom_site = [[break_point_for_diff[x+1], break_point_for_diff[x]] for x in range(len(break_point_for_diff)-1)]
+    
+    #multi-UTR coverages(median) #TODO: UTRの発現量(Coverage)の計算をMedianで行ってよいか要検討。
+    multi_UTR_coverage = []
+    for x in range(len(UTR_segments)):
+        start_index = UTR_segments[x][0]
+        end_index = UTR_segments[x][1]
+        ###TEST:
+        start_chrom_site = segments_chrom_site[x][0]
+        end_chrom_site = segments_chrom_site[x][1]
+        curr_UTR_bp_coverage = np.array(curr_3UTR_curr_sample_bp_coverage[start_index:end_index])
+        curr_UTR_median_coverage = np.median(curr_UTR_bp_coverage)
+        if flg_test == 0: #siCTRL
+            print(chrom, start_chrom_site, end_chrom_site, curr_UTR_median_coverage, sep="\t", end="\n", file=test_wig_output_file1)
+        elif flg_test == 1: #siCFIm25
+            print(chrom, start_chrom_site, end_chrom_site, curr_UTR_median_coverage, sep="\t", end="\n", file=test_wig_output_file2)
+        multi_UTR_coverage.append(curr_UTR_median_coverage)
+
+    #Estimate each UTR coverage
+    Each_UTR_coverage = [multi_UTR_coverage[x] - multi_UTR_coverage[x+1] for x in range(len(multi_UTR_coverage)) if not x == (len(multi_UTR_coverage)-1)]
+    Each_UTR_coverage.append(multi_UTR_coverage[-1]) #Required
+    Each_UTR_coverage_sum = np.sum(np.array(Each_UTR_coverage))
+    Each_UTR_coverage_percentage = np.array(Each_UTR_coverage) / Each_UTR_coverage_sum
+
+    return [multi_UTR_coverage, Each_UTR_coverage, list(Each_UTR_coverage_percentage)]
+
+
 ###MAIN###
 def de_novo_coverage_comparison_with_windows(curr_3UTR_all_samples_bp_coverage, curr_3UTR_all_samples_bp_chrom_site, UTR_start, UTR_end, curr_strand, weight_for_second_coverage, Coverage_pPAS_cutoff, pA_site, test_name, chrom, test_wig_output_file1, test_wig_output_file2):
     ###For each gene###
@@ -445,7 +480,7 @@ def de_novo_coverage_comparison_with_windows(curr_3UTR_all_samples_bp_coverage, 
         break_point_for_diff = Estimate_break_point(merged_region_coverages, gathered_UTR_search_region, UTR_start_site, UTR_end_site, curr_strand, search_point_start, search_point_end, least_search_region_coverage, test_name, flg)
         print(break_point_for_diff)
         
-        #Estimate multi-UTR coverage level
+        #Estimate multi-UTR coverage level for each sample
         if curr_strand == '+':
             break_point_for_diff.insert(0, UTR_start)
             break_point_for_diff.append(UTR_end)
@@ -454,40 +489,38 @@ def de_novo_coverage_comparison_with_windows(curr_3UTR_all_samples_bp_coverage, 
             break_point_for_diff.append(UTR_start)
 
         flg_test = 0
+        multi_UTR_coverage = []
+        Each_UTR_coverage = []
+        Each_UTR_coverage_percentage = []
         for curr_3UTR_curr_sample_bp_coverage in curr_3UTR_all_samples_bp_coverage:
-            multi_UTR_coverage = Estimate_UTR_isoform_expression(curr_3UTR_curr_sample_bp_coverage, break_point_for_diff, curr_strand, chrom, test_wig_output_file1, test_wig_output_file2, flg_test)
-            print(multi_UTR_coverage)
+            coverage_infor = Estimate_UTR_isoform_expression(curr_3UTR_curr_sample_bp_coverage, break_point_for_diff, curr_strand, chrom, test_wig_output_file1, test_wig_output_file2, flg_test)
+            multi_UTR_coverage.append(coverage_infor[0])
+            Each_UTR_coverage.append(coverage_infor[1])
+            Each_UTR_coverage_percentage.append(coverage_infor[2])
             flg_test = 1
 
-def Estimate_UTR_isoform_expression(curr_3UTR_curr_sample_bp_coverage, break_point_for_diff, curr_strand, chrom, test_wig_output_file1, test_wig_output_file2, flg_test):
-    #Prepare index for each UTR reion
-    start_site = break_point_for_diff[0]
-    UTR_segments = [[abs(break_point_for_diff[x]-start_site), abs(break_point_for_diff[x+1]-start_site)] for x in range(len(break_point_for_diff)-1)]
-    #[[0, 274], [274, 1290], [1290, 5234]]
-    if curr_strand == '+':
-        segments_chrom_site = [[break_point_for_diff[x], break_point_for_diff[x+1]] for x in range(len(break_point_for_diff)-1)]
-    elif curr_strand == '-':
-        segments_chrom_site = [[break_point_for_diff[x+1], break_point_for_diff[x]] for x in range(len(break_point_for_diff)-1)]
-    
+        Each_UTR_coverage_sub = np.array(Each_UTR_coverage[1]) - np.array(Each_UTR_coverage[0])
+        Each_UTR_coverage_percentage_sub = np.array(Each_UTR_coverage_percentage[1]) - np.array(Each_UTR_coverage_percentage[0])
 
-    #multi-UTR coverages(median) #TODO: UTRの発現量(Coverage)の計算をMedianで行ってよいか要検討。
-    multi_UTR_coverage = []
-    for x in range(len(UTR_segments)):
-        start_index = UTR_segments[x][0]
-        end_index = UTR_segments[x][1]
-        ###TEST:
-        start_chrom_site = segments_chrom_site[x][0]
-        end_chrom_site = segments_chrom_site[x][1]
-        curr_UTR_bp_coverage = np.array(curr_3UTR_curr_sample_bp_coverage[start_index:end_index])
-        curr_UTR_median_coverage = np.median(curr_UTR_bp_coverage)
-        if flg_test == 0: #siCTRL
-            print(chrom, start_chrom_site, end_chrom_site, curr_UTR_median_coverage, sep="\t", end="\n", file=test_wig_output_file1)
-        elif flg_test == 1: #siCFIm25
-            print(chrom, start_chrom_site, end_chrom_site, curr_UTR_median_coverage, sep="\t", end="\n", file=test_wig_output_file2)
-        multi_UTR_coverage.append(curr_UTR_median_coverage)
+        print(multi_UTR_coverage)
+        print(Each_UTR_coverage)
+        print(Each_UTR_coverage_percentage)
+        print(Each_UTR_coverage_sub)
+        print(Each_UTR_coverage_percentage_sub)
 
-    return multi_UTR_coverage
+        Estimate_PDUI_score(Each_UTR_coverage_percentage_sub, Each_UTR_coverage)
 
+
+
+def Estimate_PDUI_score(multi_UTR_coverage):
+    pass
+    #All_UTR_coverage = float(multi_UTR_coverage[0])
+    #Long_UTR_coverage = float(np.sum(np.array(multi_UTR_coverage[1:])))
+    #all_UTR_coverage = ()
+    #PDUI_all = Long_UTR_coverage/Short_UTR_coverage+Long_UTR_coverage
+    #PDUI_all_test = 
+
+    return Each_UTR_coverage
 
 def coverage_comparison_with_pA_site(curr_3UTR_all_samples_bp_coverage, curr_3UTR_all_samples_bp_chrom_site, UTR_start, UTR_end, curr_strand, weight_for_second_coverage, Coverage_pPAS_cutoff, pA_site, test_name):
     ###For each gene###
