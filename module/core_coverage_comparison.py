@@ -512,15 +512,37 @@ def de_novo_coverage_comparison_with_windows(curr_3UTR_all_samples_bp_coverage, 
 
 
 
-def Estimate_PDUI_score(multi_UTR_coverage):
-    pass
-    #All_UTR_coverage = float(multi_UTR_coverage[0])
-    #Long_UTR_coverage = float(np.sum(np.array(multi_UTR_coverage[1:])))
-    #all_UTR_coverage = ()
-    #PDUI_all = Long_UTR_coverage/Short_UTR_coverage+Long_UTR_coverage
-    #PDUI_all_test = 
+def Estimate_PDUI_score(Each_UTR_coverage_percentage_sub, Each_UTR_coverage):
+    first_UTR = Each_UTR_coverage_percentage_sub[0]
+    short_UTR_sum_coverage_sample1 = 0
+    short_UTR_sum_coverage_sample2 = 0
+    all_UTR_sum_coverage_sample1 = np.sum(np.array(Each_UTR_coverage[0]))
+    all_UTR_sum_coverage_sample2 = np.sum(np.array(Each_UTR_coverage[1]))
 
-    return Each_UTR_coverage
+    for x in range(len(Each_UTR_coverage_percentage_sub)):
+        if first_UTR < 0:
+            if Each_UTR_coverage_percentage_sub[x] < 0:
+                short_UTR_sum_coverage_sample1 += Each_UTR_coverage[0][x]
+                short_UTR_sum_coverage_sample2 += Each_UTR_coverage[1][x]
+            else:
+                break
+        elif first_UTR >= 0:
+            if Each_UTR_coverage_percentage_sub[x] >= 0:
+                short_UTR_sum_coverage_sample1 += Each_UTR_coverage[0][x]
+                short_UTR_sum_coverage_sample2 += Each_UTR_coverage[1][x]
+            else:
+                break
+
+    #Estimate PDUI score
+    PDUI_sample1 = (all_UTR_sum_coverage_sample1 - short_UTR_sum_coverage_sample1) / all_UTR_sum_coverage_sample1
+    PDUI_sample2 = (all_UTR_sum_coverage_sample2 - short_UTR_sum_coverage_sample2) / all_UTR_sum_coverage_sample2
+
+    PDUI_diff = PDUI_sample2 - PDUI_sample1
+    Fold_change = PDUI_sample1 / PDUI_sample2
+    Fold_change2 = short_UTR_sum_coverage_sample2 / short_UTR_sum_coverage_sample1
+
+    print(PDUI_sample1, PDUI_sample2, PDUI_diff, Fold_change, Fold_change2)
+
 
 def coverage_comparison_with_pA_site(curr_3UTR_all_samples_bp_coverage, curr_3UTR_all_samples_bp_chrom_site, UTR_start, UTR_end, curr_strand, weight_for_second_coverage, Coverage_pPAS_cutoff, pA_site, test_name):
     ###For each gene###
