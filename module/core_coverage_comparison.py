@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 from module.utils_coverage_comparison import *
 
 ###MAIN###
-def de_novo_coverage_comparison_with_windows(curr_3UTR_all_samples_bp_coverage, curr_3UTR_all_samples_bp_chrom_site, UTR_start, UTR_end, curr_strand, weight_for_second_coverage, Coverage_pPAS_cutoff, pA_site, test_name, chrom, test_wig_output_file1, test_wig_output_file2):
+def de_novo_coverage_comparison_with_windows(curr_3UTR_all_samples_bp_coverage, curr_3UTR_all_samples_bp_chrom_site, UTR_start, UTR_end, curr_strand, weight_for_second_coverage, Coverage_pPAS_cutoff, pA_site, test_name, chrom, test_wig_output_file1, test_wig_output_file2, Output_result, num_group_1, num_group_2, curr_3UTR_id, UTR_pos):
     #curr_3UTR_all_samples_bp_coverage: 
     #[ [[Coverage list 1], [3UTR region list 1]], [[Coverage list 2], [3UTR region list 2]], ... , [[Coverage list N], [3UTR region list N]] ]
     ###For each gene###
@@ -20,6 +20,8 @@ def de_novo_coverage_comparison_with_windows(curr_3UTR_all_samples_bp_coverage, 
     least_3UTR_length = 500 #>=150bp 3'UTR length are needed
     least_search_region_coverage = Coverage_pPAS_cutoff #>=5 coverage are needed in search region
     search_region_distance = 200 #Sub-region length in 3'UTR region #TODO: どうして200bpである必要があるのか理由付けがまるでない。
+
+    line_write = []
 
     #The number of samples
     num_samples = len(curr_3UTR_all_samples_bp_coverage)
@@ -126,6 +128,10 @@ def de_novo_coverage_comparison_with_windows(curr_3UTR_all_samples_bp_coverage, 
 
         break_point_for_diff = Estimate_break_point(merged_region_coverages, gathered_UTR_search_region, UTR_start_site, UTR_end_site, curr_strand, search_point_start, search_point_end, least_search_region_coverage, test_name, flg)
         print(break_point_for_diff)
+        if curr_strand == '+':
+            line_write = [curr_3UTR_id, '|'.join(list(map(str,break_point_for_diff))),UTR_pos]
+        elif curr_strand == '-':
+            line_write = [curr_3UTR_id, '|'.join(list(map(str,break_point_for_diff[::-1]))),UTR_pos]
         
         #Estimate multi-UTR coverage level for each sample
         if curr_strand == '+':
@@ -142,22 +148,46 @@ def de_novo_coverage_comparison_with_windows(curr_3UTR_all_samples_bp_coverage, 
         Each_UTR_coverage_percentage = []
         for curr_3UTR_curr_sample_bp_coverage in curr_3UTR_all_samples_bp_coverage:
             coverage_infor = Estimate_UTR_isoform_expression(curr_3UTR_curr_sample_bp_coverage, break_point_for_diff, curr_strand, chrom, test_wig_output_file1, test_wig_output_file2, flg_test)
-            multi_UTR_coverage.append(coverage_infor[0])
-            Each_UTR_coverage.append(coverage_infor[1])
-            Each_UTR_coverage_percentage.append(coverage_infor[2])
+            multi_UTR_coverage.append(coverage_infor[0]) #[[75.0, 39.0, 14.0, 2.0], [228.0, 5.0, 1.0, 1.0]]
+            Each_UTR_coverage.append(coverage_infor[1]) #[[36.0, 25.0, 12.0, 2.0], [223.0, 4.0, 0.0, 1.0]]
+            Each_UTR_coverage_percentage.append(coverage_infor[2]) #[[0.47999999999999998, 0.33333333333333331, 0.16, 0.026666666666666668], [0.97807017543859653, 0.017543859649122806, 0.0, 0.0043859649122807015]]
             flg_test = 1
 
-        Each_UTR_coverage_sub = np.array(Each_UTR_coverage[1]) - np.array(Each_UTR_coverage[0])
-        Each_UTR_coverage_percentage_sub = np.array(Each_UTR_coverage_percentage[1]) - np.array(Each_UTR_coverage_percentage[0])
+        multi_UTR_coverage_sample1 = np.array(multi_UTR_coverage[:num_group_1])
+        multi_UTR_coverage_sample1_sum = np.sum(multi_UTR_coverage_sample1, axis=0)
+        multi_UTR_coverage_sample2 = multi_UTR_coverage[num_group_1:]
+        multi_UTR_coverage_sample2_sum = np.sum(multi_UTR_coverage_sample2, axis=0)
+
+        Each_UTR_coverage_sample1 = np.array(Each_UTR_coverage[:num_group_1])
+        Each_UTR_coverage_sample1_sum = np.sum(Each_UTR_coverage_sample1, axis=0)
+        Each_UTR_coverage_sample2 = np.array(Each_UTR_coverage[num_group_1:])
+        Each_UTR_coverage_sample2_sum = np.sum(Each_UTR_coverage_sample2, axis=0)
+
+        Each_UTR_coverage_percentage_sample1 = np.array(Each_UTR_coverage_percentage[:num_group_1])
+        Each_UTR_coverage_percentage_sample1_sum = np.sum(Each_UTR_coverage_percentage_sample1, axis=0)
+        Each_UTR_coverage_percentage_sample2 = np.array(Each_UTR_coverage_percentage[num_group_1:])
+        Each_UTR_coverage_percentage_sample2_sum = np.sum(Each_UTR_coverage_percentage_sample2, axis=0)
+
+        #Each_UTR_coverage_sub = np.array(Each_UTR_coverage[1]) - np.array(Each_UTR_coverage[0])
+        #Each_UTR_coverage_percentage_sub = np.array(Each_UTR_coverage_percentage[1]) - np.array(Each_UTR_coverage_percentage[0])
 
         print(multi_UTR_coverage)
+        print(multi_UTR_coverage_sample1_sum)
+        print(multi_UTR_coverage_sample2_sum)
         print(Each_UTR_coverage)
+        print(Each_UTR_coverage_sample1_sum)
+        print(Each_UTR_coverage_sample2_sum)
         print(Each_UTR_coverage_percentage)
-        print(Each_UTR_coverage_sub)
-        print(Each_UTR_coverage_percentage_sub)
+        print(Each_UTR_coverage_percentage_sample1_sum)
+        print(Each_UTR_coverage_percentage_sample2_sum)
+        #print(Each_UTR_coverage_sub)
+        #print(Each_UTR_coverage_percentage_sub)
 
-        Estimate_PDUI_score(Each_UTR_coverage_percentage_sub, Each_UTR_coverage)
+        added_line_write = Estimate_PDUI_score(Each_UTR_coverage, Each_UTR_coverage_percentage, num_group_1, num_group_2)
+        line_write.extend(added_line_write)
 
+        #Result reporting
+        print("\t".join(line_write), end="\n", file=Output_result)
 
 
 ########################################################################

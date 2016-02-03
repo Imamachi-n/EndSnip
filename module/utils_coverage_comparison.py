@@ -75,7 +75,7 @@ def Define_UTR_search_region(UTR_start_site, UTR_end_site, curr_strand, UTR_end_
     #UTR_search_region = UTR_end_list_filtering_backward(UTR_end_list)
     UTR_search_region = Define_UTR_search_region_clustering(UTR_end_list)
 
-    #Consider Read length(single-end 36bp) #TODO: 3'end‚Ì‚¾‚ç‚¾‚ç‚µ‚½‚·‚»•”•ª‚Ì‰e‹¿‚ğŠÉ˜a‚·‚éB
+    #Consider Read length(single-end 36bp) #TODO: 3'endã®ã ã‚‰ã ã‚‰ã—ãŸã™ãéƒ¨åˆ†ã®å½±éŸ¿ã‚’ç·©å’Œã™ã‚‹ã€‚
     #UTR_search_region = [[8028691, 0, 8027503], [8028340, 0, 8023457]]
     #read_length = 36
     #if curr_strand == '+':
@@ -124,7 +124,7 @@ def Estimate_UTR_isoform_expression(curr_3UTR_curr_sample_bp_coverage, break_poi
     elif curr_strand == '-':
         segments_chrom_site = [[break_point_for_diff[x+1], break_point_for_diff[x]] for x in range(len(break_point_for_diff)-1)]
     
-    #multi-UTR coverages(median) #TODO: UTR‚Ì”­Œ»—Ê(Coverage)‚ÌŒvZ‚ğMedian‚Ås‚Á‚Ä‚æ‚¢‚©—vŒŸ“¢B
+    #multi-UTR coverages(median) #TODO: UTRã®ç™ºç¾é‡(Coverage)ã®è¨ˆç®—ã‚’Medianã§è¡Œã£ã¦ã‚ˆã„ã‹è¦æ¤œè¨ã€‚
     multi_UTR_coverage = []
     for x in range(len(UTR_segments)):
         start_index = UTR_segments[x][0]
@@ -150,36 +150,108 @@ def Estimate_UTR_isoform_expression(curr_3UTR_curr_sample_bp_coverage, break_poi
     return [multi_UTR_coverage, Each_UTR_coverage, list(Each_UTR_coverage_percentage)]
 
 
-def Estimate_PDUI_score(Each_UTR_coverage_percentage_sub, Each_UTR_coverage):
-    first_UTR = Each_UTR_coverage_percentage_sub[0]
-    short_UTR_sum_coverage_sample1 = 0
-    short_UTR_sum_coverage_sample2 = 0
-    all_UTR_sum_coverage_sample1 = np.sum(np.array(Each_UTR_coverage[0]))
-    all_UTR_sum_coverage_sample2 = np.sum(np.array(Each_UTR_coverage[1]))
+def Estimate_PDUI_score(Each_UTR_coverage, Each_UTR_coverage_percentage, num_group_1, num_group_2):
+    #Prepare Mean Each_UTR_coverage_percentage for two conditions
+    Each_UTR_coverage_percentage_sample1 = np.array(Each_UTR_coverage_percentage[:num_group_1])
+    Each_UTR_coverage_percentage_sample1_mean = np.mean(Each_UTR_coverage_percentage_sample1, axis=0)
+    Each_UTR_coverage_percentage_sample2 = np.array(Each_UTR_coverage_percentage[num_group_1:])
+    Each_UTR_coverage_percentage_sample2_mean = np.mean(Each_UTR_coverage_percentage_sample2, axis=0)
 
+    #The difference of Mean Each_UTR_coverage_percentage between two conditions
+    Each_UTR_coverage_percentage_sub = np.array(Each_UTR_coverage_percentage_sample2_mean) - np.array(Each_UTR_coverage_percentage_sample1_mean)
+
+    ##Prepare Mean Each_UTR_coverage for two conditions
+    #Each_UTR_coverage_sample1 = np.array(Each_UTR_coverage[:num_group_1])
+    #Each_UTR_coverage_sample1_mean = np.mean(Each_UTR_coverage_sample1, axis=0)
+    #Each_UTR_coverage_sample2 = np.array(Each_UTR_coverage[num_group_1:])
+    #Each_UTR_coverage_sample2_mean = np.mean(Each_UTR_coverage_sample2, axis=0)
+
+    #Define short-UTR/long-UTR isoform sets
+    first_UTR_status = Each_UTR_coverage_percentage_sub[0]
+    diff_index = 0
+    short_UTR_coverage_sample1_mean = 0
+    short_UTR_coverage_sample2_mean = 0
     for x in range(len(Each_UTR_coverage_percentage_sub)):
-        if first_UTR < 0:
+        if first_UTR_status < 0:
             if Each_UTR_coverage_percentage_sub[x] < 0:
-                short_UTR_sum_coverage_sample1 += Each_UTR_coverage[0][x]
-                short_UTR_sum_coverage_sample2 += Each_UTR_coverage[1][x]
+                #short_UTR_coverage_sample1_mean += Each_UTR_coverage_sample1_mean[x]
+                #short_UTR_coverage_sample2_mean += Each_UTR_coverage_sample2_mean[x]
+                diff_index += 1
             else:
                 break
-        elif first_UTR >= 0:
+        elif first_UTR_status >= 0:
             if Each_UTR_coverage_percentage_sub[x] >= 0:
-                short_UTR_sum_coverage_sample1 += Each_UTR_coverage[0][x]
-                short_UTR_sum_coverage_sample2 += Each_UTR_coverage[1][x]
+                #short_UTR_coverage_sample1_mean += Each_UTR_coverage_sample1_mean[x]
+                #short_UTR_coverage_sample2_mean += Each_UTR_coverage_sample2_mean[x]
+                diff_index += 1
             else:
                 break
+
+    #Estimate PDUI score for each sample
+    line_write = []
+    PDUI_all = []
+    short_UTR_coverage_all = []
+    for x in range((num_group_1 + num_group_2)):
+        curr_sample_each_UTR_coverage = Each_UTR_coverage[x]
+        curr_sample_each_UTR_coverage_short = np.sum(np.array(curr_sample_each_UTR_coverage[:diff_index]))
+        curr_sample_each_UTR_coverage_long = np.sum(np.array(curr_sample_each_UTR_coverage[diff_index:]))
+        curr_sample_each_UTR_coverage_all = np.sum(np.array(curr_sample_each_UTR_coverage))
+        PDUI_sample = curr_sample_each_UTR_coverage_long / curr_sample_each_UTR_coverage_all
+        short_UTR_coverage_all.append(curr_sample_each_UTR_coverage_short)
+        PDUI_all.append(PDUI_sample)
+        line_write.extend([curr_sample_each_UTR_coverage_long, curr_sample_each_UTR_coverage_short, PDUI_sample])
+
+    #Estimate mean PDUI and diff-PDUI
+    short_UTR_coverage_sample1_mean = np.mean(np.array(short_UTR_coverage_all[:num_group_1]))
+    short_UTR_coverage_sample2_mean = np.mean(np.array(short_UTR_coverage_all[num_group_1:]))
+    PDUI_sample1_mean = np.mean(np.array(PDUI_all[:num_group_1]))
+    PDUI_sample2_mean = np.mean(np.array(PDUI_all[num_group_1:]))
+    PDUI_diff = PDUI_sample2_mean - PDUI_sample1_mean
+    Fold_change = PDUI_sample1_mean / PDUI_sample2_mean
+    Fold_chamge2 = short_UTR_coverage_sample2_mean / short_UTR_coverage_sample1_mean
+    line_write.extend([PDUI_sample1_mean, PDUI_sample2_mean, PDUI_diff, Fold_change, Fold_chamge2])
+
+    #Casting
+    line_write = map(str, line_write)
+
+    return line_write
+
+    #short_UTR_sum_coverage_sample1 = 0
+    #short_UTR_sum_coverage_sample2 = 0
+
+    ##Estimate all UTR-isoforms coverage
+    #all_UTR_sum_coverage_sample1 = np.sum(np.array(Each_UTR_coverage[:num_group_1]), axis=0)
+    #all_UTR_sum_coverage_sample2 = np.sum(np.array(Each_UTR_coverage[num_group_1:]), axis=0)
+    ##all_UTR_sum_coverage_sample1 = np.sum(np.array(Each_UTR_coverage[0]))
+    ##all_UTR_sum_coverage_sample2 = np.sum(np.array(Each_UTR_coverage[1]))
+
+    #Each_UTR_coverage_sub = np.array(all_UTR_sum_coverage_sample2) - np.array(all_UTR_sum_coverage_sample1)
+    #first_UTR = Each_UTR_coverage_percentage_sub[0]
+
+    #diff_index = 0
+    #for x in range(len(Each_UTR_coverage_sub)):
+    #    if first_UTR < 0:
+    #        if Each_UTR_coverage_sub[x] < 0:
+    #            short_UTR_sum_coverage_sample1 += all_UTR_sum_coverage_sample1[0][x]
+    #            short_UTR_sum_coverage_sample2 += all_UTR_sum_coverage_sample1[1][x]
+    #        else:
+    #            break
+    #    elif first_UTR >= 0:
+    #        if Each_UTR_coverage_sub[x] >= 0:
+    #            short_UTR_sum_coverage_sample1 += Each_UTR_coverage[0][x]
+    #            short_UTR_sum_coverage_sample2 += Each_UTR_coverage[1][x]
+    #        else:
+    #            break
 
     #Estimate PDUI score
-    PDUI_sample1 = (all_UTR_sum_coverage_sample1 - short_UTR_sum_coverage_sample1) / all_UTR_sum_coverage_sample1
-    PDUI_sample2 = (all_UTR_sum_coverage_sample2 - short_UTR_sum_coverage_sample2) / all_UTR_sum_coverage_sample2
+    #PDUI_sample1 = (all_UTR_sum_coverage_sample1 - short_UTR_sum_coverage_sample1) / all_UTR_sum_coverage_sample1
+    #PDUI_sample2 = (all_UTR_sum_coverage_sample2 - short_UTR_sum_coverage_sample2) / all_UTR_sum_coverage_sample2
 
-    PDUI_diff = PDUI_sample2 - PDUI_sample1
-    Fold_change = PDUI_sample1 / PDUI_sample2
-    Fold_change2 = short_UTR_sum_coverage_sample2 / short_UTR_sum_coverage_sample1
+    #PDUI_diff = PDUI_sample2 - PDUI_sample1
+    #Fold_change = PDUI_sample1 / PDUI_sample2
+    #Fold_change2 = short_UTR_sum_coverage_sample2 / short_UTR_sum_coverage_sample1
 
-    print(PDUI_sample1, PDUI_sample2, PDUI_diff, Fold_change, Fold_change2)
+    #print(PDUI_sample1, PDUI_sample2, PDUI_diff, Fold_change, Fold_change2)
 
 
 
@@ -332,7 +404,7 @@ def Check_break_point(curr_UTR_search_coverage, min_MSE_index, search_point_star
     #search_coverage_residual_long = (search_coverage_long - search_coverage_mean_long)
     #search_coverage_residual_short = (search_coverage_short - search_coverage_mean_short)
 
-    if div_median >= 1.5: #TODO: LongUTR‚ÆShortUTR‚Ì·ˆÙ‚ÉŠÖ‚µ‚ÄACriteria‚ğ‚Ç‚¤‚·‚é‚©Œˆ‚ß‚éB
+    if div_median >= 1.5: #TODO: LongUTRã¨ShortUTRã®å·®ç•°ã«é–¢ã—ã¦ã€Criteriaã‚’ã©ã†ã™ã‚‹ã‹æ±ºã‚ã‚‹ã€‚
         return True
     else:
         return False
