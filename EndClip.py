@@ -15,6 +15,7 @@ Usage:
 import sys
 import os
 from datetime import datetime
+import time
 
 from bisect import bisect
 import numpy as np
@@ -44,6 +45,7 @@ def main():
     PDUI_cutoff=0.5
     Fold_change_cutoff=0.59
     '''
+    start_time = time.time()
     now_time("Beginning EndClip run (v0.1.0)")
     print("-"*50)
     if len(sys.argv) == 1:
@@ -230,7 +232,31 @@ def main():
             #coverage_comparison_with_pA_site(curr_3UTR_all_samples_bp_coverage, curr_3UTR_all_samples_bp_chrom_site, region_start, region_end, curr_strand, All_sample_coverage_weights, Coverage_pPAS_cutoff, pA_site,test_name)
             de_novo_coverage_comparison_with_windows(curr_3UTR_all_samples_bp_coverage, curr_3UTR_all_samples_bp_chrom_site, region_start, region_end, curr_strand, All_sample_coverage_weights, Coverage_pPAS_cutoff, pA_site,test_name, chrom, test_wig_output_file1, test_wig_output_file2, Output_result, num_group_1, num_group_2, curr_3UTR_id, UTR_pos)
 
-    now_time("Completely finished!!")
+    #Elapsed time
+    end_time = time.time() - start_time
+
+    end_h = int(end_time/3600)
+    end_time -= 3600 * end_h
+    if end_h < 10:
+        end_h = "0" + str(end_h)
+    else:
+        end_h = str(end_h)
+
+    end_m = int(end_time/60)
+    end_time -= 60 * end_m
+    if end_m < 10:
+        end_m = "0" + str(end_m)
+    else:
+        end_m = str(end_m)
+
+    end_s = int(end_time)
+    if end_s < 10:
+        end_s = "0" + str(end_s)
+    else:
+        end_s = str(end_s)
+
+    run_time = "Completely finished: %s:%s:%s elapsed" % (end_h, end_m, end_s)
+    now_time(run_time)
 
 if __name__ == '__main__':
     '''The identification of alternative polyadenylation sites 
