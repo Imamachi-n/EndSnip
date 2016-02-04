@@ -133,13 +133,17 @@ def Estimate_UTR_isoform_expression(curr_3UTR_curr_sample_bp_coverage, break_poi
         start_chrom_site = segments_chrom_site[x][0]
         end_chrom_site = segments_chrom_site[x][1]
         curr_UTR_bp_coverage = np.array(curr_3UTR_curr_sample_bp_coverage[start_index:end_index])
-        curr_UTR_median_coverage = np.median(curr_UTR_bp_coverage)
+        #curr_UTR_median_coverage = np.median(curr_UTR_bp_coverage)
+        curr_UTR_mean_coverage = np.mean(curr_UTR_bp_coverage)
         ###TEST: Wig file preparation
         if flg_test == 0: #siCTRL
-            print(chrom, start_chrom_site, end_chrom_site, curr_UTR_median_coverage, sep="\t", end="\n", file=test_wig_output_file1)
+            #print(chrom, start_chrom_site, end_chrom_site, curr_UTR_median_coverage, sep="\t", end="\n", file=test_wig_output_file1)
+            print(chrom, start_chrom_site, end_chrom_site, curr_UTR_mean_coverage, sep="\t", end="\n", file=test_wig_output_file1)
         elif flg_test == 1: #siCFIm25
-            print(chrom, start_chrom_site, end_chrom_site, curr_UTR_median_coverage, sep="\t", end="\n", file=test_wig_output_file2)
-        multi_UTR_coverage.append(curr_UTR_median_coverage)
+            #print(chrom, start_chrom_site, end_chrom_site, curr_UTR_median_coverage, sep="\t", end="\n", file=test_wig_output_file2)
+            print(chrom, start_chrom_site, end_chrom_site, curr_UTR_mean_coverage, sep="\t", end="\n", file=test_wig_output_file2)
+        #multi_UTR_coverage.append(curr_UTR_median_coverage)
+        multi_UTR_coverage.append(curr_UTR_mean_coverage)
 
     #Estimate each UTR coverage
     Each_UTR_coverage = [multi_UTR_coverage[x] - multi_UTR_coverage[x+1] for x in range(len(multi_UTR_coverage)) if not x == (len(multi_UTR_coverage)-1)]
@@ -150,7 +154,7 @@ def Estimate_UTR_isoform_expression(curr_3UTR_curr_sample_bp_coverage, break_poi
     return [multi_UTR_coverage, Each_UTR_coverage, list(Each_UTR_coverage_percentage)]
 
 
-def Estimate_PDUI_score(Each_UTR_coverage, Each_UTR_coverage_percentage, num_group_1, num_group_2):
+def Estimate_PDUI_score(Each_UTR_coverage, Each_UTR_coverage_percentage, UTR_isoform_length, num_group_1, num_group_2):
     #Prepare Mean Each_UTR_coverage_percentage for two conditions
     Each_UTR_coverage_percentage_sample1 = np.array(Each_UTR_coverage_percentage[:num_group_1])
     Each_UTR_coverage_percentage_sample1_mean = np.mean(Each_UTR_coverage_percentage_sample1, axis=0)
@@ -187,29 +191,45 @@ def Estimate_PDUI_score(Each_UTR_coverage, Each_UTR_coverage_percentage, num_gro
             else:
                 break
 
-    #Estimate PDUI score for each sample
+    #Estimate PDUI score & EndClip score for each sample
     line_write = []
     PDUI_all = []
+    EndClip_score_all = []
     short_UTR_coverage_all = []
     for x in range((num_group_1 + num_group_2)):
         curr_sample_each_UTR_coverage = Each_UTR_coverage[x]
+        curr_sample_each_UTR_coverage_percentage = Each_UTR_coverage_percentage[x]
+        
+        curr_sample_each_UTR_coverage_percentage_short = np.sum(np.array(curr_sample_each_UTR_coverage_percentage[:diff_index]))
+        curr_sample_each_UTR_coverage_percentage_long = np.sum((np.array(curr_sample_each_UTR_coverage_percentage[diff_index:])) * np.array(UTR_isoform_length[diff_index:]))
+        EndClip_score = curr_sample_each_UTR_coverage_percentage_short / curr_sample_each_UTR_coverage_percentage_long
+        EndClip_score_all.append(EndClip_score)
+
         curr_sample_each_UTR_coverage_short = np.sum(np.array(curr_sample_each_UTR_coverage[:diff_index]))
         curr_sample_each_UTR_coverage_long = np.sum(np.array(curr_sample_each_UTR_coverage[diff_index:]))
         curr_sample_each_UTR_coverage_all = np.sum(np.array(curr_sample_each_UTR_coverage))
+        
         PDUI_sample = curr_sample_each_UTR_coverage_long / curr_sample_each_UTR_coverage_all
         short_UTR_coverage_all.append(curr_sample_each_UTR_coverage_short)
         PDUI_all.append(PDUI_sample)
-        line_write.extend([curr_sample_each_UTR_coverage_long, curr_sample_each_UTR_coverage_short, PDUI_sample])
-
+        line_write.extend(["%.2f" % (curr_sample_each_UTR_coverage_long), "%.2f" % (curr_sample_each_UTR_coverage_short), "%.2f" % (PDUI_sample), "%s" % (str(EndClip_score))])
+         
     #Estimate mean PDUI and diff-PDUI
     short_UTR_coverage_sample1_mean = np.mean(np.array(short_UTR_coverage_all[:num_group_1]))
     short_UTR_coverage_sample2_mean = np.mean(np.array(short_UTR_coverage_all[num_group_1:]))
+    
     PDUI_sample1_mean = np.mean(np.array(PDUI_all[:num_group_1]))
     PDUI_sample2_mean = np.mean(np.array(PDUI_all[num_group_1:]))
     PDUI_diff = PDUI_sample2_mean - PDUI_sample1_mean
+    
     Fold_change = PDUI_sample1_mean / PDUI_sample2_mean
     Fold_chamge2 = short_UTR_coverage_sample2_mean / short_UTR_coverage_sample1_mean
-    line_write.extend([PDUI_sample1_mean, PDUI_sample2_mean, PDUI_diff, Fold_change, Fold_chamge2])
+    
+    EndClip_score_sample1_mean = np.mean(np.array(EndClip_score_all[:num_group_1]))
+    EndClip_score_sample2_mean = np.mean(np.array(EndClip_score_all[num_group_1:]))
+    EndClip_score_diff = EndClip_score_sample2_mean / EndClip_score_sample1_mean
+    
+    line_write.extend(["%.2f" % (PDUI_sample1_mean), "%.2f" % (PDUI_sample2_mean), "%.2f" % (PDUI_diff), "%.2f" % (Fold_change), "%.2f" % (Fold_chamge2), "%.2f" % (EndClip_score_diff)])
 
     #Casting
     line_write = map(str, line_write)

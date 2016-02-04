@@ -132,7 +132,23 @@ def de_novo_coverage_comparison_with_windows(curr_3UTR_all_samples_bp_coverage, 
             line_write = [curr_3UTR_id, '|'.join(list(map(str,break_point_for_diff))),UTR_pos]
         elif curr_strand == '-':
             line_write = [curr_3UTR_id, '|'.join(list(map(str,break_point_for_diff[::-1]))),UTR_pos]
-        
+
+        #Prepare each UTR isoform length
+        UTR_isoform_length = []
+        if curr_strand == '+':
+            break_point_for_diff_test = break_point_for_diff[:]
+            break_point_for_diff_test.append(UTR_end)
+            for end_point in break_point_for_diff_test:
+                curr_UTR_length = end_point - UTR_start
+                UTR_isoform_length.append(curr_UTR_length)
+        elif curr_strand == '-':
+            break_point_for_diff_test = break_point_for_diff[:]
+            break_point_for_diff_test.append(UTR_start)
+            for end_point in break_point_for_diff_test:
+                curr_UTR_length = UTR_end - end_point
+                UTR_isoform_length.append(curr_UTR_length)
+        print(UTR_isoform_length)
+
         #Estimate multi-UTR coverage level for each sample
         if curr_strand == '+':
             break_point_for_diff.insert(0, UTR_start)
@@ -183,7 +199,7 @@ def de_novo_coverage_comparison_with_windows(curr_3UTR_all_samples_bp_coverage, 
         #print(Each_UTR_coverage_sub)
         #print(Each_UTR_coverage_percentage_sub)
 
-        added_line_write = Estimate_PDUI_score(Each_UTR_coverage, Each_UTR_coverage_percentage, num_group_1, num_group_2)
+        added_line_write = Estimate_PDUI_score(Each_UTR_coverage, Each_UTR_coverage_percentage, UTR_isoform_length, num_group_1, num_group_2)
         line_write.extend(added_line_write)
 
         #Result reporting

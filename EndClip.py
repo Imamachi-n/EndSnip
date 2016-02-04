@@ -165,13 +165,15 @@ def main():
         curr_long_exp = 'A_%s_long_exp' % str(i+1)
         curr_short_exp = 'A_%s_short_exp' % str(i+1)
         curr_ratio = 'A_%s_PDUI' % str(i+1)
-        first_line.extend([curr_long_exp, curr_short_exp, curr_ratio])
+        curr_score = 'A_%s_EndClip_Score' % str(i+1)
+        first_line.extend([curr_long_exp, curr_short_exp, curr_ratio, curr_score])
     for i in range(num_group_2):
         curr_long_exp = 'B_%s_long_exp' % str(i+1)
         curr_short_exp = 'B_%s_short_exp' % str(i+1)
         curr_ratio = 'B_%s_PDUI' % str(i+1)
-        first_line.extend([curr_long_exp, curr_short_exp, curr_ratio])
-    first_line.extend(['A_PDUI_mean','B_PDUI_mean','PDUI_Group_diff[B_PDUI_mean - A_PDUI_mean]','Fold-change[A_PDUI_mean/B_PDUI_mean]','Fold-change[B_short_exp_mean / A_short_exp_mean]'])
+        curr_score = 'B_%s_EndClip_Score' % str(i+1)
+        first_line.extend([curr_long_exp, curr_short_exp, curr_ratio, curr_score])
+    first_line.extend(['A_PDUI_mean','B_PDUI_mean','PDUI_Group_diff[B_PDUI_mean - A_PDUI_mean]','Fold-change[A_PDUI_mean/B_PDUI_mean]','Fold-change[B_short_exp_mean / A_short_exp_mean]','Fold-change[B_score_mean / A_score_mean]'])
 
     print("\t".join(first_line), end="\n", file=Output_result)
 
