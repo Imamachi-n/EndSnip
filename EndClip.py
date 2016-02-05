@@ -179,10 +179,17 @@ def main():
 
     #Test APA event for each 3UTR
     now_time("Testing APA events for each 3UTR region...")
-    test_wig_output_file1 = open('test_bedgraph_file_ELAVL1_PTEN_siCTRL.bg', 'w') ###TEST:
-    test_wig_output_file2 = open('test_bedgraph_file_ELAVL1_PTEN_siCFIm25.bg', 'w') ###TEST:
-    print('track type=bedGraph name=EndClip_test_ELAVL1_PTEN_siCTRL description=EndClip_test_ELAVL1_PTEN_siCTRL visibility=2 maxHeightPixels=40:40:20', end="\n", file=test_wig_output_file1)
-    print('track type=bedGraph name=EndClip_test_ELAVL1_PTEN_siCFIm25 description=EndClip_test_ELAVL1_PTEN_siCFIm25 visibility=2 maxHeightPixels=40:40:20', end="\n", file=test_wig_output_file2)
+    Wig_sample_files = []
+    for name in All_Sample_files:
+        #name = 'data/NoCTRL_accepted_hits_PTEN_ELAVL1.bam.wig'
+        name = os.path.basename(name)
+        name = str(os.path.splitext(name)[0])
+        name = str(os.path.splitext(name)[0])
+        name += ".bg"
+        name_file = open(name, 'w')
+        print_write = "track type=bedGraph name=EndClip_test_%s description=EndClip_test_%s visibility=2 maxHeightPixels=40:40:20" % (name, name)
+        print(print_write, end="\n",file=name_file)
+        Wig_sample_files.append(name_file)
 
     for curr_3UTR_id in UTR_events_dict:
         #3UTR region information for each gene
@@ -232,7 +239,7 @@ def main():
             #                                                                                                        Coverage_pPAS_cutoff,
             #                                                                                                        test_name) 
             #coverage_comparison_with_pA_site(curr_3UTR_all_samples_bp_coverage, curr_3UTR_all_samples_bp_chrom_site, region_start, region_end, curr_strand, All_sample_coverage_weights, Coverage_pPAS_cutoff, pA_site,test_name)
-            de_novo_coverage_comparison_with_windows(curr_3UTR_all_samples_bp_coverage, curr_3UTR_all_samples_bp_chrom_site, region_start, region_end, curr_strand, All_sample_coverage_weights, Coverage_pPAS_cutoff, pA_site,test_name, chrom, test_wig_output_file1, test_wig_output_file2, Output_result, num_group_1, num_group_2, curr_3UTR_id, UTR_pos)
+            de_novo_coverage_comparison_with_windows(curr_3UTR_all_samples_bp_coverage, curr_3UTR_all_samples_bp_chrom_site, region_start, region_end, curr_strand, All_sample_coverage_weights, Coverage_pPAS_cutoff, pA_site,test_name, chrom, Wig_sample_files, Output_result, num_group_1, num_group_2, curr_3UTR_id, UTR_pos)
 
     #Elapsed time
     end_time = time.time() - start_time

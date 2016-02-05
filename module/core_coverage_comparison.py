@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 from module.utils_coverage_comparison import *
 
 ###MAIN###
-def de_novo_coverage_comparison_with_windows(curr_3UTR_all_samples_bp_coverage, curr_3UTR_all_samples_bp_chrom_site, UTR_start, UTR_end, curr_strand, weight_for_second_coverage, Coverage_pPAS_cutoff, pA_site, test_name, chrom, test_wig_output_file1, test_wig_output_file2, Output_result, num_group_1, num_group_2, curr_3UTR_id, UTR_pos):
+def de_novo_coverage_comparison_with_windows(curr_3UTR_all_samples_bp_coverage, curr_3UTR_all_samples_bp_chrom_site, UTR_start, UTR_end, curr_strand, weight_for_second_coverage, Coverage_pPAS_cutoff, pA_site, test_name, chrom, Wig_sample_files, Output_result, num_group_1, num_group_2, curr_3UTR_id, UTR_pos):
     #curr_3UTR_all_samples_bp_coverage: 
     #[ [[Coverage list 1], [3UTR region list 1]], [[Coverage list 2], [3UTR region list 2]], ... , [[Coverage list N], [3UTR region list N]] ]
     ###For each gene###
@@ -162,8 +162,10 @@ def de_novo_coverage_comparison_with_windows(curr_3UTR_all_samples_bp_coverage, 
         multi_UTR_coverage = []
         Each_UTR_coverage = []
         Each_UTR_coverage_percentage = []
-        for curr_3UTR_curr_sample_bp_coverage in curr_3UTR_all_samples_bp_coverage:
-            coverage_infor = Estimate_UTR_isoform_expression(curr_3UTR_curr_sample_bp_coverage, break_point_for_diff, curr_strand, chrom, test_wig_output_file1, test_wig_output_file2, flg_test)
+        for x in range(len(curr_3UTR_all_samples_bp_coverage)):
+            curr_3UTR_curr_sample_bp_coverage = curr_3UTR_all_samples_bp_coverage[x]
+            curr_Wig_sample_file = Wig_sample_files[x]
+            coverage_infor = Estimate_UTR_isoform_expression(curr_3UTR_curr_sample_bp_coverage, break_point_for_diff, curr_strand, chrom, curr_Wig_sample_file, flg_test)
             multi_UTR_coverage.append(coverage_infor[0]) #[[75.0, 39.0, 14.0, 2.0], [228.0, 5.0, 1.0, 1.0]]
             Each_UTR_coverage.append(coverage_infor[1]) #[[36.0, 25.0, 12.0, 2.0], [223.0, 4.0, 0.0, 1.0]]
             Each_UTR_coverage_percentage.append(coverage_infor[2]) #[[0.47999999999999998, 0.33333333333333331, 0.16, 0.026666666666666668], [0.97807017543859653, 0.017543859649122806, 0.0, 0.0043859649122807015]]

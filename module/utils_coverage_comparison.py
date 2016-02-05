@@ -114,7 +114,7 @@ def Define_UTR_search_region_clustering(UTR_end_list):
 
 
 ###STEP: DIFF###
-def Estimate_UTR_isoform_expression(curr_3UTR_curr_sample_bp_coverage, break_point_for_diff, curr_strand, chrom, test_wig_output_file1, test_wig_output_file2, flg_test):
+def Estimate_UTR_isoform_expression(curr_3UTR_curr_sample_bp_coverage, break_point_for_diff, curr_strand, chrom, curr_Wig_sample_file, flg_test):
     #Prepare index for each UTR region
     start_site = break_point_for_diff[0]
     UTR_segments = [[abs(break_point_for_diff[x]-start_site), abs(break_point_for_diff[x+1]-start_site)] for x in range(len(break_point_for_diff)-1)]
@@ -135,13 +135,10 @@ def Estimate_UTR_isoform_expression(curr_3UTR_curr_sample_bp_coverage, break_poi
         curr_UTR_bp_coverage = np.array(curr_3UTR_curr_sample_bp_coverage[start_index:end_index])
         #curr_UTR_median_coverage = np.median(curr_UTR_bp_coverage)
         curr_UTR_mean_coverage = np.mean(curr_UTR_bp_coverage)
+
         ###TEST: Wig file preparation
-        if flg_test == 0: #siCTRL
-            #print(chrom, start_chrom_site, end_chrom_site, curr_UTR_median_coverage, sep="\t", end="\n", file=test_wig_output_file1)
-            print(chrom, start_chrom_site, end_chrom_site, curr_UTR_mean_coverage, sep="\t", end="\n", file=test_wig_output_file1)
-        elif flg_test == 1: #siCFIm25
-            #print(chrom, start_chrom_site, end_chrom_site, curr_UTR_median_coverage, sep="\t", end="\n", file=test_wig_output_file2)
-            print(chrom, start_chrom_site, end_chrom_site, curr_UTR_mean_coverage, sep="\t", end="\n", file=test_wig_output_file2)
+        print(chrom, start_chrom_site, end_chrom_site, curr_UTR_mean_coverage, sep="\t", end="\n", file=curr_Wig_sample_file)
+
         #multi_UTR_coverage.append(curr_UTR_median_coverage)
         multi_UTR_coverage.append(curr_UTR_mean_coverage)
 
