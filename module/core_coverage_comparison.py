@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 from module.utils_coverage_comparison import *
 
 ###MAIN###
-def de_novo_coverage_comparison_with_windows(curr_3UTR_all_samples_bp_coverage, curr_3UTR_all_samples_bp_chrom_site, UTR_start, UTR_end, curr_strand, weight_for_second_coverage, Coverage_pPAS_cutoff, pA_site, test_name, chrom, Wig_sample_files, Output_result, num_group_1, num_group_2, curr_3UTR_id, UTR_pos):
+def de_novo_coverage_comparison_with_windows(curr_3UTR_all_samples_bp_coverage, curr_3UTR_all_samples_bp_chrom_site, UTR_start, UTR_end, curr_strand, weight_for_second_coverage, Coverage_pPAS_cutoff, test_name, chrom, Wig_sample_files, Output_result, num_group_1, num_group_2, curr_3UTR_id, UTR_pos):
     #curr_3UTR_all_samples_bp_coverage: 
     #[ [[Coverage list 1], [3UTR region list 1]], [[Coverage list 2], [3UTR region list 2]], ... , [[Coverage list N], [3UTR region list N]] ]
     ###For each gene###
@@ -47,7 +47,6 @@ def de_novo_coverage_comparison_with_windows(curr_3UTR_all_samples_bp_coverage, 
         #Prepare UTR search region
         UTR_start_site = int(UTR_start) #UTR_start is '1-base'.
         UTR_end_site = int(UTR_end)
-        UTR_end_list = pA_site
 
         UTR_search_region = De_novo_UTR_search_region(UTR_start, UTR_end, curr_strand, search_region_distance)
         print(UTR_search_region)
@@ -61,6 +60,8 @@ def de_novo_coverage_comparison_with_windows(curr_3UTR_all_samples_bp_coverage, 
             ###STEP1:
             break_point_candidates = Estimate_break_point(curr_3UTR_curr_sample_bp_coverage, UTR_search_region, UTR_start_site, UTR_end_site, curr_strand, search_point_start, search_point_end, least_search_region_coverage, test_name, flg)
             print(break_point_candidates)
+            if not break_point_candidates:
+                continue
 
             ##STEP2:
             #ReEstimate break points
@@ -69,6 +70,8 @@ def de_novo_coverage_comparison_with_windows(curr_3UTR_all_samples_bp_coverage, 
             updated_break_point_candidates = Estimate_break_point(curr_3UTR_curr_sample_bp_coverage, updated_UTR_search_region, UTR_start_site, UTR_end_site, curr_strand, search_point_start, search_point_end, least_search_region_coverage, test_name, flg)
             print("Updated_break_point_candidates")
             print(updated_break_point_candidates)
+            if not updated_break_point_candidates:
+                continue
 
             ###STEP3: 
             #Near <=200bp break points => ReEstimate
@@ -94,6 +97,8 @@ def de_novo_coverage_comparison_with_windows(curr_3UTR_all_samples_bp_coverage, 
                 updated_break_point_candidates = Estimate_break_point(curr_3UTR_curr_sample_bp_coverage, updated_UTR_search_region, UTR_start_site, UTR_end_site, curr_strand, search_point_start, search_point_end, least_search_region_coverage, test_name, flg)
                 print("Retry: Updated_break_point_candidates")
                 print(updated_break_point_candidates)
+                if not updated_break_point_candidates:
+                    continue
             else: #TEST:
                 pass
                 #print("If Retry...")
@@ -110,6 +115,8 @@ def de_novo_coverage_comparison_with_windows(curr_3UTR_all_samples_bp_coverage, 
         
         #DIFF: Comarison of Control vs CFIm25 knockdown samples
         #Sort gathered_break_points
+        if not gathered_break_point: #Single-UTR
+            return
         gathered_break_point = sorted(gathered_break_point)
         if curr_strand == '-':
             gathered_break_point = gathered_break_point[::-1]

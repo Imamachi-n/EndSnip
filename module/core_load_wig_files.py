@@ -16,7 +16,7 @@ def Load_Target_Wig_files(All_Wig_files, UTR_Annotation_file):
         region_end = fields[2]
         name = fields[3]
         curr_strand = fields[5]
-        pA_site = fields[6]
+        #pA_site = fields[6]
         UTR_pos = "%s:%s-%s" % (curr_chr, region_start, region_end)
         
         #Define 3'UTR Annotation regions
@@ -33,8 +33,8 @@ def Load_Target_Wig_files(All_Wig_files, UTR_Annotation_file):
         region_end = int(region_end)
 
         if (region_end - region_start) > 50: #Min 3UTR length(Default: 50bp)
-            #UTR_events_dict => [chrom, start, end, strand, UTR_position(chrom:start-end), pA_site]
-            UTR_events_dict[name] = [curr_chr, region_start, region_end, curr_strand, UTR_pos, pA_site]
+            #UTR_events_dict => [chrom, start, end, strand, UTR_position(chrom:start-end)]
+            UTR_events_dict[name] = [curr_chr, region_start, region_end, curr_strand, UTR_pos]
             # TODO: Isoformごとに判断する場合を考慮に入れる
             # 終止コドンが異なるケースでは、Isoformごとに判断する。
             # 3'UTR中でスプライシングを受けている場合も考慮する。

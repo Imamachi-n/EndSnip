@@ -199,8 +199,8 @@ def main():
         region_end = curr_3UTR_structure[2] #region end
         curr_strand = curr_3UTR_structure[3] #strand
         UTR_pos = curr_3UTR_structure[4] #UTR position information
-        pA_site = curr_3UTR_structure[5].split('|') #pA_site list
-        pA_site = list(map(int,pA_site))
+        #pA_site = curr_3UTR_structure[5].split('|') #pA_site list
+        #pA_site = list(map(int,pA_site))
 
         #If gene names exist in coverage dict(for each gene)
         if curr_3UTR_id in All_samples_Target_3UTR_coverages:
@@ -239,7 +239,7 @@ def main():
             #                                                                                                        Coverage_pPAS_cutoff,
             #                                                                                                        test_name) 
             #coverage_comparison_with_pA_site(curr_3UTR_all_samples_bp_coverage, curr_3UTR_all_samples_bp_chrom_site, region_start, region_end, curr_strand, All_sample_coverage_weights, Coverage_pPAS_cutoff, pA_site,test_name)
-            de_novo_coverage_comparison_with_windows(curr_3UTR_all_samples_bp_coverage, curr_3UTR_all_samples_bp_chrom_site, region_start, region_end, curr_strand, All_sample_coverage_weights, Coverage_pPAS_cutoff, pA_site,test_name, chrom, Wig_sample_files, Output_result, num_group_1, num_group_2, curr_3UTR_id, UTR_pos)
+            de_novo_coverage_comparison_with_windows(curr_3UTR_all_samples_bp_coverage, curr_3UTR_all_samples_bp_chrom_site, region_start, region_end, curr_strand, All_sample_coverage_weights, Coverage_pPAS_cutoff, test_name, chrom, Wig_sample_files, Output_result, num_group_1, num_group_2, curr_3UTR_id, UTR_pos)
 
     #Elapsed time
     end_time = time.time() - start_time
