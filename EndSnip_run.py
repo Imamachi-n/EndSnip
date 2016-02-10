@@ -201,6 +201,7 @@ def main():
         UTR_pos = curr_3UTR_structure[4] #UTR position information
         #pA_site = curr_3UTR_structure[5].split('|') #pA_site list
         #pA_site = list(map(int,pA_site))
+        print(curr_3UTR_id)
 
         #If gene names exist in coverage dict(for each gene)
         if curr_3UTR_id in All_samples_Target_3UTR_coverages:

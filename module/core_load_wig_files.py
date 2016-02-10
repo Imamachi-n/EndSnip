@@ -32,7 +32,7 @@ def Load_Target_Wig_files(All_Wig_files, UTR_Annotation_file):
         region_start = int(region_start) + 1 #0-base => 1-base
         region_end = int(region_end)
 
-        if (region_end - region_start) > 50: #Min 3UTR length(Default: 50bp)
+        if (region_end - region_start) >= 500: #Min 3UTR length(Default: 500bp)
             #UTR_events_dict => [chrom, start, end, strand, UTR_position(chrom:start-end)]
             UTR_events_dict[name] = [curr_chr, region_start, region_end, curr_strand, UTR_pos]
             # TODO: Isoformごとに判断する場合を考慮に入れる
@@ -61,7 +61,7 @@ def Load_Target_Wig_files(All_Wig_files, UTR_Annotation_file):
 
             #Add coverage data in each region on each chromosome
             if region_start > curr_sample_All_chroms_coverage_dict[chrom_name][0][-1]: #if gap region exists
-                curr_sample_All_chroms_coverage_dict[chrom_name][0].append(region_start) #Region end => Region start
+                curr_sample_All_chroms_coverage_dict[chrom_name][0].append(region_start) #Region end => Region start #1-based
                 curr_sample_All_chroms_coverage_dict[chrom_name][1].append(0)            #Read depth => 0
             curr_sample_All_chroms_coverage_dict[chrom_name][0].append(region_end)       #Region end
             curr_sample_All_chroms_coverage_dict[chrom_name][1].append(read_depth)       #Read depth
@@ -95,6 +95,15 @@ def Load_Target_Wig_files(All_Wig_files, UTR_Annotation_file):
                 curr_chr_coverage = curr_sample_All_chroms_coverage_dict[curr_chr]
 
                 #TEST:
+                #Raw_data
+                #chrom_site   = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+                #chr_coverage = [1, 4, 4, 0, 0, 0, 1, 2, 2, 0]
+                #Input_data
+                #chrom_site   = [0, 1, 3, 6, 7, 9, 10]
+                #chr_coverage = [0, 1, 4, 0, 1, 2, 0]
+                #from bisect import bisect
+                #curr_chr_coverage = [[0, 1, 3, 6, 7, 9, 10], [0, 1, 4, 0, 1, 2, 0]]
+
                 #from bisect import bisect
                 #curr_chr_coverage = [[1,10,20,30,40,50,60], [1,10,10,10,30,30,50]] #[[Chrom_site],[Coverage]]
                 #NO1:
@@ -118,7 +127,11 @@ def Load_Target_Wig_files(All_Wig_files, UTR_Annotation_file):
                 extracted_3UTR_region = []
                 extracted_coverage = []
 
-                if int(curr_chr_coverage[0][left_region_index-1]) == int(region_start) and int(curr_chr_coverage[0][right_region_index-1]) == int(region_end):
+                #In the case of 0 coverage,
+                if left_region_index == right_region_index:
+                    extracted_3UTR_region = [region_start, region_end]
+                    extracted_coverage = [0, 0]
+                elif int(curr_chr_coverage[0][left_region_index-1]) == int(region_start) and int(curr_chr_coverage[0][right_region_index-1]) == int(region_end):
                     #print("1")
                     #List of 3UTR region
                     extracted_3UTR_region = curr_chr_coverage[0][left_region_index-1:right_region_index]
@@ -141,9 +154,6 @@ def Load_Target_Wig_files(All_Wig_files, UTR_Annotation_file):
                     extracted_coverage.insert(0,curr_chr_coverage[1][left_region_index])
                 else:
                     #print("4")
-                    #In the case of 0 coverage,
-                    if left_region_index == right_region_index:
-                        continue
                     #List of 3UTR region
                     extracted_3UTR_region = curr_chr_coverage[0][left_region_index:right_region_index]
                     extracted_3UTR_region.insert(0,region_start)
@@ -154,6 +164,7 @@ def Load_Target_Wig_files(All_Wig_files, UTR_Annotation_file):
 
                 '''
                 #Example
+                #Index:        0  1  2  3  4  5  6
                 #chrom_site = [1,10,20,30,40,50,60]
                 #coverage   = [1,10,10,10,30,30,50]
                 #1bp => 1
@@ -165,28 +176,28 @@ def Load_Target_Wig_files(All_Wig_files, UTR_Annotation_file):
                 #51-60bp => 50
 
                 ###1-60[1,7]###
-                #bisect(chrom_site,1) => 1
-                #bisect(chrom_site,60) => 7
-                #chrom_site: [10,20,30,40,50,60] => ['1',10,20,30,40,50,60]
-                #coverage:   [10,10,10,30,30,50] => ['1',10,10,10,30,30,50]
+                #bisect(chrom_site,1) => 1 => 0/0
+                #bisect(chrom_site,60) => 7 => 7/7
+                #chrom_site: [1,10,20,30,40,50,60] => [1,10,20,30,40,50,60]
+                #coverage:   [1,10,10,10,30,30,50] => [1,10,10,10,30,30,50]
 
                 ###1-55[1,6]###
-                #bisect(chrom_site,1) => 1
-                #bisect(chrom_site,55) => 6
-                #chrom_site: [10,20,30,40,50] => ['1',10,20,30,40,50,"55"]
-                #coverage:   [10,10,10,30,30] => ['1',10,10,10,30,30,'50']
+                #bisect(chrom_site,1) => 1 => 0/0
+                #bisect(chrom_site,55) => 6 => 6/7
+                #chrom_site: [1,10,20,30,40,50]    => [1,10,20,30,40,50,"55"]
+                #coverage:   [1,10,10,10,30,30,50] => [1,10,10,10,30,30, 50]
 
                 ###5-60[1,7]###
-                #bisect(chrom_site,5) => 1
-                #bisect(chrom_site,60) => 7
+                #bisect(chrom_site,5) => 1 => 1/1
+                #bisect(chrom_site,60) => 7 => 7/7
                 #chrom_site: [10,20,30,40,50,60] => [ "5",10,20,30,40,50,60]
-                #coverage:   [10,10,10,30,30,50] => ['10',10,10,10,30,30,50]
+                #coverage:   [10,10,10,30,30,50] => ["10",10,10,10,30,30,50]
 
                 ###5-55[1,7]###
-                #bisect(chrom_site,5) => 1
-                #bisect(chrom_site,55) => 6
-                #chrom_site: [10,20,30,40,50,60] => [ "5",10,20,30,40,50,"55"]
-                #coverage:   [10,10,10,30,30,50] => ['10',10,10,10,30,30,'50']
+                #bisect(chrom_site,5) => 1 => 1/1
+                #bisect(chrom_site,55) => 6 => 6/7
+                #chrom_site: [10,20,30,40,50]    => [ "5",10,20,30,40,50,"55"]
+                #coverage:   [10,10,10,30,30,50] => ["10",10,10,10,30,30, 50 ]
                 '''
 
                 #List of depth(coverage) in 3'UTR region

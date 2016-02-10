@@ -199,7 +199,7 @@ def Estimate_PDUI_score(Each_UTR_coverage, Each_UTR_coverage_percentage, UTR_iso
         
         curr_sample_each_UTR_coverage_percentage_short = np.sum(np.array(curr_sample_each_UTR_coverage_percentage[:diff_index]))
         curr_sample_each_UTR_coverage_percentage_long = np.sum((np.array(curr_sample_each_UTR_coverage_percentage[diff_index:])) * np.array(UTR_isoform_length[diff_index:]))
-        EndClip_score = curr_sample_each_UTR_coverage_percentage_short / curr_sample_each_UTR_coverage_percentage_long
+        EndClip_score = curr_sample_each_UTR_coverage_percentage_short / curr_sample_each_UTR_coverage_percentage_long #TODO: divide by zero
         EndClip_score_all.append(EndClip_score)
 
         curr_sample_each_UTR_coverage_short = np.sum(np.array(curr_sample_each_UTR_coverage[:diff_index]))
@@ -219,12 +219,12 @@ def Estimate_PDUI_score(Each_UTR_coverage, Each_UTR_coverage_percentage, UTR_iso
     PDUI_sample2_mean = np.mean(np.array(PDUI_all[num_group_1:]))
     PDUI_diff = PDUI_sample2_mean - PDUI_sample1_mean
     
-    Fold_change = PDUI_sample1_mean / PDUI_sample2_mean
+    Fold_change = PDUI_sample1_mean / PDUI_sample2_mean #TODO: divide by zero
     Fold_chamge2 = short_UTR_coverage_sample2_mean / short_UTR_coverage_sample1_mean
     
     EndClip_score_sample1_mean = np.mean(np.array(EndClip_score_all[:num_group_1]))
     EndClip_score_sample2_mean = np.mean(np.array(EndClip_score_all[num_group_1:]))
-    EndClip_score_diff = EndClip_score_sample2_mean / EndClip_score_sample1_mean
+    EndClip_score_diff = EndClip_score_sample2_mean / EndClip_score_sample1_mean #TODO: divide by zero
     
     line_write.extend(["%.2f" % (PDUI_sample1_mean), "%.2f" % (PDUI_sample2_mean), "%.2f" % (PDUI_diff), "%.2f" % (Fold_change), "%.2f" % (Fold_chamge2), "%.2f" % (EndClip_score_diff)])
 
@@ -361,7 +361,7 @@ def Estimate_break_point(curr_3UTR_curr_sample_bp_coverage, UTR_search_region, U
 
             if Evaluation_result:
                 res = break_point_short_UTR_coverage - break_point_long_UTR_coverage
-                dev = break_point_short_UTR_coverage / break_point_long_UTR_coverage
+                dev = break_point_short_UTR_coverage / break_point_long_UTR_coverage #TODO: divide by zero
                 print(break_point_chrom_site, break_point_short_UTR_coverage, break_point_long_UTR_coverage, res, dev)
 
                 #Append Chrom sites of break point candidates
@@ -414,7 +414,7 @@ def Check_break_point(curr_UTR_search_coverage, min_MSE_index, search_point_star
     search_coverage_median_short = np.median(search_coverage_short)
 
     #div_mean = search_coverage_mean_short / search_coverage_mean_long
-    div_median = search_coverage_median_short / search_coverage_median_long
+    div_median = search_coverage_median_short / search_coverage_median_long #TODO: divide by zero
     print(div_median)
 
     #Residual
