@@ -94,6 +94,24 @@ def Load_Target_Wig_files(All_Wig_files, UTR_Annotation_file):
                 #Region and Depth for current chromosome
                 curr_chr_coverage = curr_sample_All_chroms_coverage_dict[curr_chr]
 
+                #TEST:
+                #from bisect import bisect
+                #curr_chr_coverage = [[1,10,20,30,40,50,60], [1,10,10,10,30,30,50]] #[[Chrom_site],[Coverage]]
+                #NO1:
+                #region_start = 1
+                #region_end = 60
+                #NO2:
+                #region_start = 1
+                #region_end = 55
+                #NO3:
+                #region_start = 5
+                #region_end = 60
+                #NO4:
+                #region_start = 5
+                #region_end = 55
+                #NO5:
+                #region_start = 70
+                #region_end = 90
                 left_region_index = bisect(curr_chr_coverage[0], region_start) #Insertion site(index) of region start
                 right_region_index = bisect(curr_chr_coverage[0], region_end) #Insertion site(index) of region end
 
@@ -101,17 +119,20 @@ def Load_Target_Wig_files(All_Wig_files, UTR_Annotation_file):
                 extracted_coverage = []
 
                 if int(curr_chr_coverage[0][left_region_index-1]) == int(region_start) and int(curr_chr_coverage[0][right_region_index-1]) == int(region_end):
+                    #print("1")
                     #List of 3UTR region
                     extracted_3UTR_region = curr_chr_coverage[0][left_region_index-1:right_region_index]
                     #List of depth(coverage) in 3'UTR region
                     extracted_coverage = curr_chr_coverage[1][left_region_index-1:right_region_index]
                 elif int(curr_chr_coverage[0][left_region_index-1]) == int(region_start):
+                    #print("2")
                     #List of 3UTR region
                     extracted_3UTR_region = curr_chr_coverage[0][left_region_index-1:right_region_index]
                     extracted_3UTR_region.append(region_end)
                     #List of depth(coverage) in 3'UTR region
                     extracted_coverage = curr_chr_coverage[1][left_region_index-1:right_region_index+1]
                 elif int(curr_chr_coverage[0][right_region_index-1]) == int(region_end):
+                    #print("3")
                     #List of 3UTR region
                     extracted_3UTR_region = curr_chr_coverage[0][left_region_index:right_region_index]
                     extracted_3UTR_region.insert(0,region_start)
@@ -119,6 +140,10 @@ def Load_Target_Wig_files(All_Wig_files, UTR_Annotation_file):
                     extracted_coverage = curr_chr_coverage[1][left_region_index:right_region_index]
                     extracted_coverage.insert(0,curr_chr_coverage[1][left_region_index])
                 else:
+                    #print("4")
+                    #In the case of 0 coverage,
+                    if left_region_index == right_region_index:
+                        continue
                     #List of 3UTR region
                     extracted_3UTR_region = curr_chr_coverage[0][left_region_index:right_region_index]
                     extracted_3UTR_region.insert(0,region_start)
@@ -131,6 +156,13 @@ def Load_Target_Wig_files(All_Wig_files, UTR_Annotation_file):
                 #Example
                 #chrom_site = [1,10,20,30,40,50,60]
                 #coverage   = [1,10,10,10,30,30,50]
+                #1bp => 1
+                #2-10bp => 10
+                #11-20bp => 10
+                #21-30bp => 10
+                #31-40bp => 30
+                #41-50bp => 30
+                #51-60bp => 50
 
                 ###1-60[1,7]###
                 #bisect(chrom_site,1) => 1

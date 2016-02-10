@@ -328,14 +328,14 @@ def Estimate_break_point(curr_3UTR_curr_sample_bp_coverage, UTR_search_region, U
             curr_region_result[2].append(Short_UTR_coverage)
 
         #TODO: TEST: Mean_squared_error in 3'UTR region for PTEN, ELAVL1
-        name = 'CTRL'
-        if flg == 1:
-            name = 'CFIm25KD'
-        plt.plot(curr_region_result[0])
-        #plt.show()
-        filename = "data/output_variance_" + test_name + '_' + name + '_' + str(curr_UTR_search_region[0]) + "-" + str(curr_UTR_search_region[2]) + ".png"
-        plt.savefig(filename)
-        plt.close()
+        #name = 'CTRL'
+        #if flg == 1:
+        #    name = 'CFIm25KD'
+        #plt.plot(curr_region_result[0])
+        ##plt.show()
+        #filename = "data/output_variance_" + test_name + '_' + name + '_' + str(curr_UTR_search_region[0]) + "-" + str(curr_UTR_search_region[2]) + ".png"
+        #plt.savefig(filename)
+        #plt.close()
 
         #plt.plot(curr_UTR_search_coverage_variance)
         #filename = "data/output_variance_mean_" + test_name + '_' + name + '_' + str(curr_UTR_search_region[0]) + "-" + str(curr_UTR_search_region[2]) + ".png"

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-EndClip: Comprehensive analysis of Alternative PolyAdenylation Site.
+EndSnip: Comprehensive analysis of Alternative PolyAdenylation Site.
 Created by Naoto Imamachi on 2016-01-06.
 Updated and maintained by Naoto Imamachi since Jan 2016.
 
@@ -8,7 +8,7 @@ This script was modified from Dapars algorithm (https://github.com/ZhengXia/DaPa
 License: GPL v2
 
 Usage:
-  EndClip_main.py <configure_file>
+  EndSnip_main.py <configure_file>
 
 """
 
@@ -46,7 +46,7 @@ def main():
     Fold_change_cutoff=0.59
     '''
     start_time = time.time()
-    now_time("Beginning EndClip run (v0.1.0)")
+    now_time("Beginning EndSnip run (v0.1.0)")
     print("-"*50)
     if len(sys.argv) == 1:
         sys.exit("ERROR: Please provide the configure file...")
@@ -219,15 +219,15 @@ def main():
                 curr_3UTR_all_samples_bp_chrom_site.append(curr_3UTR_curr_samples_bp_chrom_site) #List of bp chromosome site for each sample
                 
                 #TODO: TEST: Coverage in 3'UTR region for PTEN, ELAVL1
-                plt.plot(curr_3UTR_curr_samples_bp_coverage)
-                #plt.show()
+            #    plt.plot(curr_3UTR_curr_samples_bp_coverage)
+            #    #plt.show()
                 global test_name
                 test_name = curr_3UTR_id.split('|')[1]
-                filename = "data/output_coverage_" + test_name + ".png"
-                plt.savefig(filename)
+            #    filename = "data/output_coverage_" + test_name + ".png"
+            #    plt.savefig(filename)
 
             #TODO: TEST: Coverage in 3'UTR region for PTEN, ELAVL1
-            plt.close()
+            #plt.close()
             
             #De novo identification of APA event for each 3UTR region
             curr_3UTR_all_samples_bp_coverage = np.array(curr_3UTR_all_samples_bp_coverage)

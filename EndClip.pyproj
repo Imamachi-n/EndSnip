@@ -5,7 +5,7 @@
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>688b61c9-31e5-456a-a6b5-2921b31111f4</ProjectGuid>
     <ProjectHome>.</ProjectHome>
-    <StartupFile>EndClip.py</StartupFile>
+    <StartupFile>EndSnip_run.py</StartupFile>
     <SearchPath>
     </SearchPath>
     <WorkingDirectory>.</WorkingDirectory>
@@ -22,7 +22,7 @@
     <EnableUnmanagedDebugging>false</EnableUnmanagedDebugging>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="EndClip.py" />
+    <Compile Include="EndSnip_run.py" />
     <Compile Include="EndClip_prep.py">
       <SubType>Code</SubType>
     </Compile>
@@ -84,7 +84,7 @@
     <Content Include="data\siCFIm25-1_accepted_hits_PTEN_ELAVL1.bam.wig" />
     <Content Include="data\siCTRL_S_accepted_hits_PTEN_ELAVL1.bam.wig" />
     <Content Include="EndClip_preparation.sh" />
-    <Content Include="EndClip_run.sh" />
+    <Content Include="EndSnip_run.sh" />
   </ItemGroup>
   <PropertyGroup>
     <VisualStudioVersion Condition="'$(VisualStudioVersion)' == ''">10.0</VisualStudioVersion>
