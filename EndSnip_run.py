@@ -179,6 +179,8 @@ def main():
 
     #Test APA event for each 3UTR
     now_time("Testing APA events for each 3UTR region...")
+
+    #Wig file preparation
     Wig_sample_files = []
     for name in All_Sample_files:
         #name = 'data/NoCTRL_accepted_hits_PTEN_ELAVL1.bam.wig'
@@ -187,9 +189,22 @@ def main():
         name = str(os.path.splitext(name)[0])
         name += ".bg"
         name_file = open(name, 'w')
-        print_write = "track type=bedGraph name=EndClip_test_%s description=EndClip_test_%s visibility=2 maxHeightPixels=40:40:20" % (name, name)
+        print_write = "track type=bedGraph name=EndSnip_test_%s description=EndSnip_test_%s visibility=2 maxHeightPixels=40:40:20" % (name, name)
         print(print_write, end="\n",file=name_file)
         Wig_sample_files.append(name_file)
+
+    #Bed file preparation
+    Bed_sample_files = []
+    for name in All_Sample_files:
+        #name = 'data/NoCTRL_accepted_hits_PTEN_ELAVL1.bam.wig'
+        name = os.path.basename(name)
+        name = str(os.path.splitext(name)[0])
+        name = str(os.path.splitext(name)[0])
+        name += ".bed"
+        name_file = open(name, 'w')
+        print_write = "track type=bed name=EndSnip_UTRIsoform_%s description=EndSnip_UTRIsoform_%s" % (name, name)
+        print(print_write, end="\n",file=name_file)
+        Bed_sample_files.append(name_file)
 
     for curr_3UTR_id in UTR_events_dict:
         #3UTR region information for each gene
@@ -240,7 +255,7 @@ def main():
             #                                                                                                        Coverage_pPAS_cutoff,
             #                                                                                                        test_name) 
             #coverage_comparison_with_pA_site(curr_3UTR_all_samples_bp_coverage, curr_3UTR_all_samples_bp_chrom_site, region_start, region_end, curr_strand, All_sample_coverage_weights, Coverage_pPAS_cutoff, pA_site,test_name)
-            de_novo_coverage_comparison_with_windows(curr_3UTR_all_samples_bp_coverage, curr_3UTR_all_samples_bp_chrom_site, region_start, region_end, curr_strand, All_sample_coverage_weights, Coverage_pPAS_cutoff, test_name, chrom, Wig_sample_files, Output_result, num_group_1, num_group_2, curr_3UTR_id, UTR_pos)
+            de_novo_coverage_comparison_with_windows(curr_3UTR_all_samples_bp_coverage, curr_3UTR_all_samples_bp_chrom_site, region_start, region_end, curr_strand, All_sample_coverage_weights, Coverage_pPAS_cutoff, test_name, chrom, Wig_sample_files, Bed_sample_files, curr_3UTR_id, Output_result, num_group_1, num_group_2, UTR_pos)
 
     #Elapsed time
     end_time = time.time() - start_time

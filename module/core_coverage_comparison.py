@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 from module.utils_coverage_comparison import *
 
 ###MAIN###
-def de_novo_coverage_comparison_with_windows(curr_3UTR_all_samples_bp_coverage, curr_3UTR_all_samples_bp_chrom_site, UTR_start, UTR_end, curr_strand, weight_for_second_coverage, Coverage_pPAS_cutoff, test_name, chrom, Wig_sample_files, Output_result, num_group_1, num_group_2, curr_3UTR_id, UTR_pos):
+def de_novo_coverage_comparison_with_windows(curr_3UTR_all_samples_bp_coverage, curr_3UTR_all_samples_bp_chrom_site, UTR_start, UTR_end, curr_strand, weight_for_second_coverage, Coverage_pPAS_cutoff, test_name, chrom, Wig_sample_files, Bed_sample_files, curr_3UTR_id, Output_result, num_group_1, num_group_2, UTR_pos):
     #curr_3UTR_all_samples_bp_coverage: 
     #[ [[Coverage list 1], [3UTR region list 1]], [[Coverage list 2], [3UTR region list 2]], ... , [[Coverage list N], [3UTR region list N]] ]
     ###For each gene###
@@ -42,8 +42,16 @@ def de_novo_coverage_comparison_with_windows(curr_3UTR_all_samples_bp_coverage, 
         curr_first_100_coverage = np.mean(curr_Region_Coverage_raw[0:coverage_test_region]) #Mean of coverage in 100bp region (5'end last exon)
         Region_first_100_coverage_all_samples.append(curr_first_100_coverage) #List of mean coverage in 100bp region
 
-    #Filtering coverage threshold(Default: >=5 coverage / >=150bp 3UTR length)
-    if sum(np.array(Region_first_100_coverage_all_samples) >= coverage_threshold) >= num_samples and (UTR_end - UTR_start) >= least_3UTR_length:
+    #Filtering coverage threshold(Default: >=5 coverage(All samples) / >=500bp 3UTR length)
+    if sum(np.array(Region_first_100_coverage_all_samples) >= coverage_threshold) < num_samples:
+        line_write = [curr_3UTR_id, 'Low_coverage']
+        print("\t".join(line_write), end="\n", file=Output_result)
+        return
+    elif (UTR_end - UTR_start) < least_3UTR_length:
+        line_write = [curr_3UTR_id, 'Too short 3UTR length']
+        print("\t".join(line_write), end="\n", file=Output_result)
+        return
+    else:
         #Prepare UTR search region
         UTR_start_site = int(UTR_start) #UTR_start is '1-base'.
         UTR_end_site = int(UTR_end)
@@ -115,7 +123,9 @@ def de_novo_coverage_comparison_with_windows(curr_3UTR_all_samples_bp_coverage, 
         
         #DIFF: Comarison of Control vs CFIm25 knockdown samples
         #Sort gathered_break_points
-        if not gathered_break_point: #Single-UTR
+        if not gathered_break_point: #Single-UTR => !!SAVE!! (Maybe use its list for estimating coverage bias)
+            line_write = [curr_3UTR_id, 'Single-UTR']
+            print("\t".join(line_write), end="\n", file=Output_result)
             return
         gathered_break_point = sorted(gathered_break_point)
         if curr_strand == '-':
@@ -146,15 +156,24 @@ def de_novo_coverage_comparison_with_windows(curr_3UTR_all_samples_bp_coverage, 
             break_point_for_diff_test = break_point_for_diff[:]
             break_point_for_diff_test.append(UTR_end)
             for end_point in break_point_for_diff_test:
-                curr_UTR_length = end_point - UTR_start
+                curr_UTR_length = end_point - UTR_start + 1
                 UTR_isoform_length.append(curr_UTR_length)
         elif curr_strand == '-':
             break_point_for_diff_test = break_point_for_diff[:]
             break_point_for_diff_test.append(UTR_start)
             for end_point in break_point_for_diff_test:
-                curr_UTR_length = UTR_end - end_point
+                curr_UTR_length = UTR_end - end_point + 1
                 UTR_isoform_length.append(curr_UTR_length)
         print(UTR_isoform_length)
+
+        #Prepare bed file
+        end_list_for_BED = []
+        if curr_strand == '+':
+            end_list_for_BED = break_point_for_diff[:]
+            end_list_for_BED.append(UTR_end)
+        elif curr_strand == '-':
+            end_list_for_BED = break_point_for_diff[:]
+            end_list_for_BED.insert(0, UTR_start)
 
         #Estimate multi-UTR coverage level for each sample
         if curr_strand == '+':
@@ -176,6 +195,20 @@ def de_novo_coverage_comparison_with_windows(curr_3UTR_all_samples_bp_coverage, 
             multi_UTR_coverage.append(coverage_infor[0]) #[[75.0, 39.0, 14.0, 2.0], [228.0, 5.0, 1.0, 1.0]]
             Each_UTR_coverage.append(coverage_infor[1]) #[[36.0, 25.0, 12.0, 2.0], [223.0, 4.0, 0.0, 1.0]]
             Each_UTR_coverage_percentage.append(coverage_infor[2]) #[[0.47999999999999998, 0.33333333333333331, 0.16, 0.026666666666666668], [0.97807017543859653, 0.017543859649122806, 0.0, 0.0043859649122807015]]
+
+            #Save Bed file
+            for y in range(len(coverage_infor[2])):
+                write_line_for_BED = []
+                if curr_strand == '+':
+                    curr_UTR_end = end_list_for_BED[y]
+                    score = coverage_infor[2][y]
+                    write_line_for_BED.extend([chrom, UTR_start, curr_UTR_end, curr_3UTR_id, score, curr_strand])
+                elif curr_strand == '-':
+                    curr_UTR_start = end_list_for_BED[y]
+                    score = coverage_infor[2][y]
+                    write_line_for_BED.extend([chrom, curr_UTR_start, UTR_end, curr_3UTR_id, score, curr_strand])
+                write_line_for_BED = map(str, write_line_for_BED)
+                print("\t".join(write_line_for_BED), end="\n", file=Bed_sample_files[x])
             flg_test = 1
 
         multi_UTR_coverage_sample1 = np.array(multi_UTR_coverage[:num_group_1])
