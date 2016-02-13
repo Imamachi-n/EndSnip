@@ -173,7 +173,7 @@ def de_novo_coverage_comparison_with_windows(curr_3UTR_all_samples_bp_coverage, 
             end_list_for_BED.append(UTR_end)
         elif curr_strand == '-':
             end_list_for_BED = break_point_for_diff[:]
-            end_list_for_BED.insert(0, UTR_start)
+            end_list_for_BED.append(UTR_start)
 
         #Estimate multi-UTR coverage level for each sample
         if curr_strand == '+':
