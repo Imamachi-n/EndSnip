@@ -4,8 +4,22 @@ EndSnip: Comprehensive analysis of Alternative PolyAdenylation Site.
 Created by Naoto Imamachi on 2016-01-06.
 Updated and maintained by Naoto Imamachi since Jan 2016.
 
-This script was modified from Dapars algorithm (https://github.com/ZhengXia/DaPars).
-License: GPL v2
+This script was modified from Dapars algorithm <https://github.com/ZhengXia/DaPars>.
+
+### This program is free software; you can redistribute it and/or
+### modify it under the terms of the GNU General Public License
+### as published by the Free Software Foundation; either version 2
+### of the License, or (at your option) any later version.
+###
+### This program is distributed in the hope that it will be useful,
+### but WITHOUT ANY WARRANTY; without even the implied warranty of
+### MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+### GNU General Public License for more details.
+###
+### You should have received a copy of the GNU General Public License
+### along with this program; if not, see <http://www.gnu.org/licenses/>.
+###
+### 2016/02/24 Changed XXX....
 
 Usage:
   EndSnip_main.py <configure_file>
