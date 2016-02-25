@@ -58,26 +58,18 @@ ebt <- ebt[txdf.txid]
 #Prepare genome infor etc...
 seqlevelsStyle(Hsapiens) <- "UCSC"
 genenames <- names(ebt)
+genenames <- genenames[1:20] #TEST: selected 10 transcripts with single-3UTR
 names(genenames) <- genenames
 
-#TEST: buildFragtypesFromExons
-exons <- ebt[[genenames[1]]]
-genome <- Hsapiens
-readlength <- 48
-minsize <- 100
-maxsize <- 300
-npre <- 8
-npost <- 12
-gc <- TRUE
-gc.str <- TRUE
-vlmm <- TRUE
+#Load scripts
+source("C:/Users/Naoto/Documents/Visual Studio 2015/Projects/EndClip/EndClip/inst/Iron-convertion_func.R")
+source("C:/Users/Naoto/Documents/Visual Studio 2015/Projects/EndClip/EndClip/inst/Iron-data_prep_func.R")
 
-is(exons, "GRanges")
-is(genome, "BSgenome")
-is.numeric(minsize) & is.numeric(maxsize) & is.numeric(readlength)
-sum(width(exons)) > maxsize
-all(c("exon_rank", "exon_id") %in% names(mcols(exons)))
-
+#Prepare two demensional matrix stored the information about the aligned paired-end fragments
+fragtypes <- lapply(genenames, function(gene) {
+    buildFragtypesFromExons(ebt[[gene]], genome = Hsapiens,
+                            readlength = 48, minsize = 100, maxsize = 300)
+})
 
 
 
