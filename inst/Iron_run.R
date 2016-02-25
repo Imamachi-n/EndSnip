@@ -48,6 +48,7 @@ trxids <- as.vector(su[,1])
 #Extract reference trxdb
 txdf <- select(txdb, columns = c("TXNAME", "TXID", "GENEID"), keys = trxids, keytype = "TXNAME")
 txdf.txid <- txdf$TXID
+txdf.txid <- txdf$TXID[1:20] #TEST: selected 10 transcripts with single-3UTR
 
 #Extract exon information from gtf file
 ebt <- exonsBy(txdb, "tx")
@@ -70,6 +71,116 @@ fragtypes <- lapply(genenames, function(gene) {
     buildFragtypesFromExons(ebt[[gene]], genome = Hsapiens,
                             readlength = 48, minsize = 100, maxsize = 300)
 })
+
+# Make index file for BAM file (If bam.bai file does not exist, ...)
+indexBam(bamfile)
+
+# Prepare RNA-seq fragment sequence bias model
+models <- list("GC" = list(formaula = "count~ns(gc, knots = gc.knots, Boundary.knots = gc.bk) + gene",
+                           offset = c("fraglen", "vlmm")))
+
+#TEST: fitModelOverGenes
+#FPBP needed to downsample to a target fragment per kilobase
+getFPBP <- function(genes, bamfile){
+    gene.ranges <- unlist(range(genes)) #GRanges: st -> ed (including exon/intron)
+    gene.lengths <- sum(width(genes))
+    
+    #Count mapped reads on each transcript
+    res <- countBam(bamfile, param = ScanBamParam(which = gene.ranges))
+    
+    #Normalized counts
+    out <- (res$records / 2) / gene.lengths
+    names(out) <- names(genes)
+    return(out)
+}
+
+#Count mapped reads on each transcript
+alpineFlag <- function() scanBamFlag(isSecondaryAlignment = FALSE)
+readGAlignAlpine <- function(bamfile, generange){
+    readGAlignmentPairs(bamfile, param = ScanBamParam(which = generange, flag = alpineFlag()))
+}
+
+genes <- ebt
+bamfile <- bamfile
+fragtypes <- fragtypes
+genome <- Hsapiens
+models <- models
+readlength <- 48
+zerotopos <- 2
+speedglm <- TRUE
+minsize <- 100
+maxsize <- 300
+
+#Checking
+stopifnot(file.exists(bamfile))
+stopifnot(file.exists(paste0(as.character(bamfile),".bai")))
+stopifnot(is(genes, "GRangesList"))
+stopifnot(all(!is.na(sapply(models, function(x) x$formula))))
+stopifnot(is.numeric(readlength) & length(readlength) == 1)
+stopifnot(all(names(genes) %in% names(fragtypes)))
+if (any(sapply(models, function(m) "vlmm" %in% m$offset))) {
+    stopifnot("fivep" %in% colnames(fragtypes[[1]]))
+}
+
+#Extract transcript sequence
+exon.dna <- getSeq(genome, genes) #DNAStringSetList: Exon level for each gene(transcript)
+gene.seqs <- as(lapply(exon.dna, unlist), "DNAStringSet") #DNAStringSet: Transcript level for each gene(transcript)
+
+#FPBP needed to downsample to a target fragment per kilobase
+fpbp <- getFPBP(genes, bamfile)
+
+target.fpbp <- 0.2 #FPBP Criteria
+
+#Fitting parameters
+fitpar.sub <- list()
+fitpar.sub[["coefs"]] <- list()
+
+fragtypes.sub.list <- list()
+for (i in seq_along(genes)) {
+    #PASS:
+}
+
+#PASS:
+i <- 1 #TEST:
+gene.name <- names(genes)[i]
+gene <- genes[[gene.name]] #GRanges: gene infor
+l <- sum(width(gene)) #length
+
+#Add counts for sample and subset
+generange <- range(gene) #GRanges
+strand(generange) <- '*' #not necessary
+
+#Checking: chromosome number is the same as genome
+if (!as.character(seqnames(generange)) %in% seqlevels(BamFile(bamfile))) next
+
+#Mapped reads on each transcript (st -> ed (including exon/intron))
+suppressWarnings({
+    ga <- readGAlignAlpine(bamfile, generange)
+    })
+
+#Remove genes with Low coverage 
+if (length(ga) < 20) next
+
+ga <- keepSeqlevels(ga, as.character(seqnames(gene)[1]))
+
+#Calculate normalized read counts
+nfrags <- length(ga)
+this.fpbp <- nfrags / l
+
+#Downsampling if sequence reads is too large, ... # TODO: Need to change the timing of downsampling ?? (After findCompatibleOverlaps)
+if (this.fpbp > target.fpbp) {
+    ga <- ga[sample(nfrags, round(nfrags * (target.fpbp / this.fpbp)), FALSE)]
+}
+
+#Compatible reads on each transcript (st -> ed (including only exon!!))
+fco <- findCompatibleOverlaps(ga, GRangesList(gene))
+
+#Transcript position of compatible reads
+reads <- gaToReadsOnTx(ga, GRangesList(gene), fco)
+
+
+
+
 
 
 
