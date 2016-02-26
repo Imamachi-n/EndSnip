@@ -117,10 +117,7 @@ stopifnot(file.exists(paste0(as.character(bamfile),".bai")))
 stopifnot(is(genes, "GRangesList"))
 stopifnot(all(!is.na(sapply(models, function(x) x$formula))))
 stopifnot(is.numeric(readlength) & length(readlength) == 1)
-stopifnot(all(names(genes) %in% names(fragtypes)))
-if (any(sapply(models, function(m) "vlmm" %in% m$offset))) {
-    stopifnot("fivep" %in% colnames(fragtypes[[1]]))
-}
+
 
 #Extract transcript sequence
 exon.dna <- getSeq(genome, genes) #DNAStringSetList: Exon level for each gene(transcript)
@@ -178,6 +175,28 @@ fco <- findCompatibleOverlaps(ga, GRangesList(gene))
 #Transcript position of compatible reads
 reads <- gaToReadsOnTx(ga, GRangesList(gene), fco)
 
+#Checking
+stopifnot(all(names(genes) %in% names(fragtypes)))
+if (any(sapply(models, function(m) "vlmm" %in% m$offset))) {
+    stopifnot("fivep" %in% colnames(fragtypes[[1]]))
+}
+
+#
+
+
+#Add count data to fragtypes(dummy data)
+fraglist.temp <- matchReadsToFraglist(reads, fragtypes[gene.name])
+
+#Remove the following reads: Start/End site == 1
+not.first.or.last.bp <- !(fraglist.temp[[1]]$start == 1 | fraglist.temp[[1]]$end == 1)
+fraglist.temp[[1]] <- fraglist.temp[[1]][not.first.or.last.bp,]
+
+#Check read depth
+if (sum(fraglist.temp[[1]]$count) < 20) next
+
+#Subset to include all (N) fragment locations and (N * zerotopos) zero locations
+#Now we build a list of subsetted fragtypes
+fragtypes.sub.list[[gene.name]] <- subsetAndWeightFraglist(fraglist.temp, zerotopos)
 
 
 

@@ -116,4 +116,75 @@ buildFragtypesFromExons <- function(exons, genome, readlength,
 }
 
 
+#TEST: matchReadsToFraglist
+#reads <- reads
+#fraglist <- fragtypes[gene.name]
+#tx.idx <- 1 #TEST:
+
+matchReadsToFraglist <- function(reads, fraglist) {
+    for (tx.idx in seq_along(fraglist)) {
+        #Extract unique reads
+        unique.reads <- unique(reads[[tx.idx]])
+        
+        #Count the number of reads at each position
+        readtab <- table(match(reads[[tx.idx]], unique.reads))
+        
+        #Add 'count' column in "fraglist" DataFrame
+        fraglist[[tx.idx]]$count <- 0
+        
+        #Search the same reads from dummy data(fragment range: 100-300nt)
+        reads.in.fraglist <- unique.reads %in% fraglist[[tx.idx]]$id
+        
+        #Select unique reads matched with criteria(fragment range: 100-300nt)
+        unique.reads <- unique.reads[reads.in.fraglist]
+        readtab <- readtab[reads.in.fraglist]
+        
+        fraglist[[tx.idx]][match(unique.reads, fraglist[[tx.idx]]$id), "count"] <- as.numeric(readtab)
+    }
+    return(fraglist)
+}
+
+
+#TEST: subsetAndWeightFraglist
+#fraglist <- fraglist.temp
+#zerotopos <- 2
+#minzero <- 2000
+#maxmult <- 20000
+#tx.idx <- 1 #TEST:
+
+subsetAndWeightFraglist <- function(fraglist, zerotopos, minzero = 2000, maxmult = 20000) {
+    ntx <- length(fraglist)
+    fraglist.sub <- list()
+    for (tx.idx in seq_len(ntx)) {
+        #Total read counts
+        count <- fraglist[[tx.idx]]$count
+        
+        sumpos <- sum(count > 0) #Mapped reads
+        sumzero <- sum(count == 0) #Un-mapped reads
+        
+        #How many zeros of subset?
+        #Some multiple of the #pos, or a preset minimum value
+        multzero <- max(round(zerotopos * sumpos), minzero) #>=2000
+        
+        #Max out at a certain amount, and then sample equal to #pos
+        multzero <- if (multzero > maxmult) max(maxmult, sumpos) else multzero
+        
+        #and not more than the #zero
+        numzero <- min(sumzero, multzero)
+        
+        #Get selected ID after downsampling
+        idx <- c(which(count > 0), 
+                 sample(which(count == 0), numzero, replace = FALSE))
+        
+        #Subset the rows
+        fraglist.sub[[tx.idx]] <- fraglist[[tx.idx]][idx,]
+        
+        #Add weights(Mapped reads->1 / Unmapped reads->SumZero/NumZero(normalized))
+        fraglist.sub[[tx.idx]]$wts <- c(rep(1, sumpos), rep(sumzero/numzero, numzero))
+        
+        fragtypes <- do.call(rbind, fraglist.sub)
+        return(fragtypes)
+    }
+}
+
 
