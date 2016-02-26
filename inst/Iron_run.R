@@ -100,6 +100,21 @@ readGAlignAlpine <- function(bamfile, generange){
     readGAlignmentPairs(bamfile, param = ScanBamParam(which = generange, flag = alpineFlag()))
 }
 
+#
+matchToDensity <- function(x, d) {
+    #Devide each fragment based on the distribution of fragment length
+    idx <- cut(x, c(-Inf, d$x, Inf))
+    
+    #Prepare dentity score
+    pdf <- c(0, d$y)
+    
+    #
+    pdf.x <- pdf[idx] + 1e-6
+    
+    stopifnot(all(pdf.x > 0))
+    return(pdf.x)
+}
+
 genes <- ebt
 bamfile <- bamfile
 fragtypes <- fragtypes
@@ -195,6 +210,37 @@ for (i in seq_along(genes)) {
     fragtypes.sub.list[[gene.name]] <- subsetAndWeightFraglist(fraglist.temp, zerotopos)
     
 }
+
+#Checking
+if (length(fragtypes.sub.list) == 0) stop("not enough reads to model: ", bamfile)
+if (length(fragtypes.sub.list) < 2) stop("requires at least two genes to fit model")
+
+#Check the numeber of fragments(mapped reads + dummy reads)
+gene.nrows <- sapply(fragtypes.sub.list, nrow)
+
+#Merge each gene data
+fragtypes.sub <- do.call(rbind, fragtypes.sub.list)
+
+#Prepare fitting parameters
+fitpar.sub[["models"]] <- models
+
+## -- Fragment bias --
+if (any(sapply(models, function(m) "fraglen" %in% m$offset))) {
+    #Select mapped reads from total reads(mapped reads/dummy reads)
+    pos.count <- fragtypes.sub$count > 0
+
+    #Selected fragment length from mapped reads    
+    fraglens <- rep(fragtypes.sub$fraglen[pos.count], fragtypes.sub$count[pos.count])
+    
+    #Calculate the density of fragment length from mapped reads
+    fraglen.density <- density(fraglens)
+    
+    fragtypes.sub$logdfraglen <- log(matchToDensity(fragtypes.sub$fraglen, fraglen.density))
+    
+    fitpar.sub[["fraglen.density"]] <- fraglen.density
+}
+
+# -- Random hexamer priming bias with VLMM --
 
 
 
