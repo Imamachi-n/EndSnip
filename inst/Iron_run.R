@@ -67,10 +67,10 @@ source("C:/Users/Naoto/Documents/Visual Studio 2015/Projects/EndClip/EndClip/ins
 source("C:/Users/Naoto/Documents/Visual Studio 2015/Projects/EndClip/EndClip/inst/Iron-data_prep_func.R")
 
 #Prepare two demensional matrix stored the information about the aligned paired-end fragments
-fragtypes <- lapply(genenames, function(gene) {
-    buildFragtypesFromExons(ebt[[gene]], genome = Hsapiens,
-                            readlength = 48, minsize = 100, maxsize = 300)
-})
+#fragtypes <- lapply(genenames, function(gene) {
+#    buildFragtypesFromExons(ebt[[gene]], genome = Hsapiens,
+#                            readlength = 48, minsize = 100, maxsize = 300)
+#})
 
 # Make index file for BAM file (If bam.bai file does not exist, ...)
 indexBam(bamfile)
@@ -134,69 +134,67 @@ fitpar.sub[["coefs"]] <- list()
 
 fragtypes.sub.list <- list()
 for (i in seq_along(genes)) {
-    #PASS:
-}
-
-#PASS:
-i <- 1 #TEST:
-gene.name <- names(genes)[i]
-gene <- genes[[gene.name]] #GRanges: gene infor
-l <- sum(width(gene)) #length
-
-#Add counts for sample and subset
-generange <- range(gene) #GRanges
-strand(generange) <- '*' #not necessary
-
-#Checking: chromosome number is the same as genome
-if (!as.character(seqnames(generange)) %in% seqlevels(BamFile(bamfile))) next
-
-#Mapped reads on each transcript (st -> ed (including exon/intron))
-suppressWarnings({
-    ga <- readGAlignAlpine(bamfile, generange)
+    gene.name <- names(genes)[i]
+    gene <- genes[[gene.name]] #GRanges: gene infor
+    l <- sum(width(gene)) #length
+    
+    #Add counts for sample and subset
+    generange <- range(gene) #GRanges
+    strand(generange) <- '*' #not necessary
+    
+    #Checking: chromosome number is the same as genome
+    if (!as.character(seqnames(generange)) %in% seqlevels(BamFile(bamfile))) next
+    
+    #Mapped reads on each transcript (st -> ed (including exon/intron))
+    suppressWarnings({
+        ga <- readGAlignAlpine(bamfile, generange)
     })
-
-#Remove genes with Low coverage 
-if (length(ga) < 20) next
-
-ga <- keepSeqlevels(ga, as.character(seqnames(gene)[1]))
-
-#Calculate normalized read counts
-nfrags <- length(ga)
-this.fpbp <- nfrags / l
-
-#Downsampling if sequence reads is too large, ... # TODO: Need to change the timing of downsampling ?? (After findCompatibleOverlaps)
-if (this.fpbp > target.fpbp) {
-    ga <- ga[sample(nfrags, round(nfrags * (target.fpbp / this.fpbp)), FALSE)]
+    
+    #Remove genes with Low coverage 
+    if (length(ga) < 20) next
+    
+    ga <- keepSeqlevels(ga, as.character(seqnames(gene)[1]))
+    
+    #Calculate normalized read counts
+    nfrags <- length(ga)
+    this.fpbp <- nfrags / l
+    
+    #Downsampling if sequence reads is too large, ... # TODO: Need to change the timing of downsampling ?? (After findCompatibleOverlaps)
+    if (this.fpbp > target.fpbp) {
+        ga <- ga[sample(nfrags, round(nfrags * (target.fpbp / this.fpbp)), FALSE)]
+    }
+    
+    #Compatible reads on each transcript (st -> ed (including only exon!!))
+    fco <- findCompatibleOverlaps(ga, GRangesList(gene))
+    
+    #Transcript position of compatible reads
+    reads <- gaToReadsOnTx(ga, GRangesList(gene), fco)
+    
+    #Prepare dummy data(All possible fragment patterns)
+    fragtypes <- list(buildFragtypesFromExons(ebt[[gene.name]], genome = Hsapiens,
+                                              readlength = 48, minsize = 100, maxsize = 300))
+    
+    #Checking
+    #stopifnot(all(names(genes) %in% names(fragtypes)))
+    #if (any(sapply(models, function(m) "vlmm" %in% m$offset))) {
+    #    stopifnot("fivep" %in% colnames(fragtypes[[1]]))
+    #}
+    
+    #Add count data to fragtypes(dummy data)
+    fraglist.temp <- matchReadsToFraglist(reads, fragtypes)
+    
+    #Remove the following reads: Start/End site == 1
+    not.first.or.last.bp <- !(fraglist.temp[[1]]$start == 1 | fraglist.temp[[1]]$end == 1)
+    fraglist.temp[[1]] <- fraglist.temp[[1]][not.first.or.last.bp,]
+    
+    #Check read depth
+    if (sum(fraglist.temp[[1]]$count) < 20) next
+    
+    #Subset to include all (N) fragment locations and (N * zerotopos) zero locations
+    #Now we build a list of subsetted fragtypes
+    fragtypes.sub.list[[gene.name]] <- subsetAndWeightFraglist(fraglist.temp, zerotopos)
+    
 }
-
-#Compatible reads on each transcript (st -> ed (including only exon!!))
-fco <- findCompatibleOverlaps(ga, GRangesList(gene))
-
-#Transcript position of compatible reads
-reads <- gaToReadsOnTx(ga, GRangesList(gene), fco)
-
-#Checking
-stopifnot(all(names(genes) %in% names(fragtypes)))
-if (any(sapply(models, function(m) "vlmm" %in% m$offset))) {
-    stopifnot("fivep" %in% colnames(fragtypes[[1]]))
-}
-
-#
-
-
-#Add count data to fragtypes(dummy data)
-fraglist.temp <- matchReadsToFraglist(reads, fragtypes[gene.name])
-
-#Remove the following reads: Start/End site == 1
-not.first.or.last.bp <- !(fraglist.temp[[1]]$start == 1 | fraglist.temp[[1]]$end == 1)
-fraglist.temp[[1]] <- fraglist.temp[[1]][not.first.or.last.bp,]
-
-#Check read depth
-if (sum(fraglist.temp[[1]]$count) < 20) next
-
-#Subset to include all (N) fragment locations and (N * zerotopos) zero locations
-#Now we build a list of subsetted fragtypes
-fragtypes.sub.list[[gene.name]] <- subsetAndWeightFraglist(fraglist.temp, zerotopos)
 
 
 
