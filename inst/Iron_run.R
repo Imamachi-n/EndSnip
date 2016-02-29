@@ -65,6 +65,7 @@ names(genenames) <- genenames
 #Load scripts
 source("C:/Users/Naoto/Documents/Visual Studio 2015/Projects/EndClip/EndClip/inst/Iron-convertion_func.R")
 source("C:/Users/Naoto/Documents/Visual Studio 2015/Projects/EndClip/EndClip/inst/Iron-data_prep_func.R")
+source("C:/Users/Naoto/Documents/Visual Studio 2015/Projects/EndClip/EndClip/inst/Iron-VLMM.R")
 
 #Prepare two demensional matrix stored the information about the aligned paired-end fragments
 #fragtypes <- lapply(genenames, function(gene) {
@@ -247,35 +248,73 @@ if (sapply(models, function(m) "vlmm" %in% m$offset)) {
     #3'side sequence
     threep <- fragtypes.sub$threep[fragtypes.sub$threep.test]
     
-    vlmm.fivep <- fitVLMM(fivep, gene.seqs) #PASS:
+    #Observed/Expected nucleotide frequency (5'/3'side)
+    vlmm.fivep <- fitVLMM(fivep, gene.seqs)
+    vlmm.threep <- fitVLMM(threep, gene.seqs)
+    
+    #Now calculate log(bias) for each fragment based on the VLMM
+    fragtypes.sub <- addVLMMBias(fragtypes.sub, vlmm.fivep, vlmm.threep) #PASS:
 }
 
 #PASS:
-seqs <- fivep
-gene.seqs <- gene.seqs
+fragtypes <- fragtypes.sub
 
-#Fit a VLMM according to Roberts et al. (2011), doi:10.1186/gb-2011-12-3-r22
+#5'side sequence reads
+fivep <- fragtypes$fivep[fragtypes$fivep.test]
+fivep.short <- fragtypes$fivep[!fragtypes$fivep.test] #Near 5'end
+
+#3'side sequence reads
+threep <- fragtypes$threep[fragtypes$threep.test]
+threep.short <- fragtypes$threep[!fragtypes$threep.test] #Near 3'end
+
+## -- 5'side sequence reads --
+#Initialize 'fivep.bias' vector
+fivep.bias <- numeric(nrow(fragtypes))
+
+fivep.bias[fragtypes$fivep.test] <- rowSums(log(calcVLMMBias(fivep, vlmm.fivep, short=FALSE))) #PASS:
+fivep.bias[!fragtypes$fivep.test] <- rowSums(log(calcVLMMBias(fivep.short, vlmm.fivep, short=TRUE))) #PASS:
+
+
+
+#calcVLMMBias:
+seqs <- fivep
+vlmm.model <- vlmm.fivep
+short <- F
+
+#Checking
+stopifnot(!is.null(vlmm.model))
+
+#Nucleotides
 dna.letters <- c("A", "C", "G", "T")
 
 #Parameter
-vlmm.order <- c(0, 0, 0, 0, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 1, 1, 0, 0)
+vlmm.order <- if (short) {
+    #Short: the VLMM when the reads are 8 or less positions from the end of transcript
+    c(0, 1, 2, 2, 2, 2, 2, 2, 2, 1, 1, 0, 0)
+} else {
+    c(0, 0, 0, 0, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 1, 1, 0, 0)
+}
 
-## -- 0-order --
-#Initialize list
-order0 <- list()
+#Maps from position in the seq to the VLMM matrices
+map <- if (short) {
+    list("order0" = c(9:21),
+         "order1" = c(rep(NA, 1)), 6:15, rep(NA, 2),
+         "order2" = c(rep(NA, 2)), 4:10, rep(NA, 4))
+} else {
+    list("order0" = 1:21,
+         "order1" = c(rep(NA, 4)), 1:15, rep(NA, 2),
+         "order2" = c(rep(NA, 7)), 1:10, rep(NA, 4))
+}
 
-#Observed nucleotide frequency (0-order)
-order0$obs <- sapply(seq_along(vlmm.order), function(i) getPositionalKmerFregs(seqs, dna.letters, order = 0, pos = i))
-colnames(order0$obs) <- seq_along(vlmm.order)
+bias <- matrix(NA, length(seqs), length(vlmm.order))
 
-#Expected nucleotide frequency (0-order)
-order0$expect <- getKmerFreqs(gene.seqs, dna.letters, 0)
 
-## -- 1-order --
-order <- 1
-pos1 <- which(vlmm.order >= order)
-order1 <- getPositionalObsOverExp(seqs, gene.seqs, dna.letters, order, pos1)
-
+for (i in seq_along(vlmm.order)) {
+    #PASS:
+}
+#PASS:
+i <- 1
+order <- vlmm.order[i]
 
 
 
