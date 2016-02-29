@@ -1,3 +1,5 @@
+## Alpine function: <https://github.com/mikelove/alpine>
+
 #exons <- ebt[[genenames[1]]]
 #genome <- Hsapiens
 #readlength <- 48

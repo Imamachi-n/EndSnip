@@ -240,7 +240,42 @@ if (any(sapply(models, function(m) "fraglen" %in% m$offset))) {
     fitpar.sub[["fraglen.density"]] <- fraglen.density
 }
 
-# -- Random hexamer priming bias with VLMM --
+## -- Random hexamer priming bias with VLMM --
+if (sapply(models, function(m) "vlmm" %in% m$offset)) {
+    #5'side sequence
+    fivep <- fragtypes.sub$fivep[fragtypes.sub$fivep.test]
+    #3'side sequence
+    threep <- fragtypes.sub$threep[fragtypes.sub$threep.test]
+    
+    vlmm.fivep <- fitVLMM(fivep, gene.seqs) #PASS:
+}
+
+#PASS:
+seqs <- fivep
+gene.seqs <- gene.seqs
+
+#Fit a VLMM according to Roberts et al. (2011), doi:10.1186/gb-2011-12-3-r22
+dna.letters <- c("A", "C", "G", "T")
+
+#Parameter
+vlmm.order <- c(0, 0, 0, 0, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 1, 1, 0, 0)
+
+## -- 0-order --
+#Initialize list
+order0 <- list()
+
+#Observed nucleotide frequency (0-order)
+order0$obs <- sapply(seq_along(vlmm.order), function(i) getPositionalKmerFregs(seqs, dna.letters, order = 0, pos = i))
+colnames(order0$obs) <- seq_along(vlmm.order)
+
+#Expected nucleotide frequency (0-order)
+order0$expect <- getKmerFreqs(gene.seqs, dna.letters, 0)
+
+## -- 1-order --
+order <- 1
+pos1 <- which(vlmm.order >= order)
+order1 <- getPositionalObsOverExp(seqs, gene.seqs, dna.letters, order, pos1)
+
 
 
 
