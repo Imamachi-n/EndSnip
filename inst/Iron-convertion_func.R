@@ -65,6 +65,3 @@ gaToReadsOnTx <- function(ga, grl, fco = NULL) {
     names(reads) <- names(grl)
     return(reads)
 }
-
-
-

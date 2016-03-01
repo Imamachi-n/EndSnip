@@ -125,15 +125,94 @@ fitVLMM <- function(seqs, gene.seqs) {
     return(list(order0 = order0, order1 = order1, order2 = order2))
 }
 
+#Calculate random hexamer priming bias(Observed/Expected)
+#seqs <- fivep
+#vlmm.model <- vlmm.fivep
+#short <- F
 calcVLMMBias <- function(seqs, vlmm.model, short = FALSE, pseudocount = 1) {
+    #Checking
+    stopifnot(!is.null(vlmm.model))
     
+    #Nucleotides
+    dna.letters <- c("A", "C", "G", "T")
+    
+    #Parameter
+    vlmm.order <- if (short) {
+        #Short: the VLMM when the reads are 8 or less positions from the end of transcript
+        c(0, 1, 2, 2, 2, 2, 2, 2, 2, 1, 1, 0, 0)
+    } else {
+        c(0, 0, 0, 0, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 1, 1, 0, 0)
+    }
+    
+    #Maps from position in the seq to the VLMM matrices
+    map <- if (short) {
+        list("order0" = c(9:21),
+             "order1" = c(rep(NA, 1), 6:15, rep(NA, 2)),
+             "order2" = c(rep(NA, 2), 4:10, rep(NA, 4)))
+    } else {
+        list("order0" = 1:21,
+             "order1" = c(rep(NA, 4), 1:15, rep(NA, 2)),
+             "order2" = c(rep(NA, 7), 1:10, rep(NA, 4)))
+    }
+    
+    bias <- matrix(NA, length(seqs), length(vlmm.order))
+    
+    for (i in seq_along(vlmm.order)) {
+        #Define order
+        order <- vlmm.order[i]
+        
+        #k-order nucleotide patterns
+        alpha <- alphafun(dna.letters, order)
+        
+        #0-order, 1-order, 2-order
+        o <- paste0("order", order)
+        
+        #Extract mono/di/tri-nucleotide patterns
+        ## 1,   2,   3,   4,   5,   6,   7,   8,   9,  10,  11,   12,   13,   14,   15,   16,   17,   18,   19,   20,   21,
+        ## 0,   0,   0,   0,   1,   1,   1,   2,   2,  2,   2,    2,    2,    2,    2,    2,    2,    1,    1,    0,    0,
+        ##1-1, 2-2, 3-3, 4-4, 4-5, 5-6, 6-7, 6-8, 7-9 8-10 9-11 10-12 11-13 12-14 13-15 14-16 15-17 17-18 18-19 20-20 21-21
+        kmer <- substr(seqs, i - order, i)
+        
+        #Each order position
+        j <- map[[o]][i]
+        
+        if (order == 0) {
+            #2 -> 1-dimentional matrix(Observed) / 1-dimentional matrix(Expected)
+            bias.lookup <- vlmm.model[[o]]$obs[,j] / vlmm.model[[o]]$expect
+        } else {
+            #3 -> 2-dimentional matrix(Observed) / 2-dimentional matrix(Expected) => convert into array(vector)
+            bias.lookup <- as.vector(vlmm.model[[o]]$obs[,,j] / vlmm.model[[o]]$expect)
+            names(bias.lookup) <- alpha
+        }
+        bias[,i] <- bias.lookup[ kmer ]
+    }
+    return(bias)
 }
 
+#Add 5'/3'side bias into fragtypes
+#fragtypes <- fragtypes.sub
 addVLMMBias <- function(fragtypes, vlmm.fivep, vlmm.threep) {
+    #5'side sequence reads
+    fivep <- fragtypes$fivep[fragtypes$fivep.test]
+    fivep.short <- fragtypes$fivep[!fragtypes$fivep.test] #Near 5'end
     
+    #3'side sequence reads
+    threep <- fragtypes$threep[fragtypes$threep.test]
+    threep.short <- fragtypes$threep[!fragtypes$threep.test] #Near 3'end
+    
+    ## -- 5'side sequence reads --
+    #Initialize 'fivep.bias' vector
+    fivep.bias <- numeric(nrow(fragtypes))
+    threep.bias <- numeric(nrow(fragtypes))
+    
+    #Calculate random hexamer priming bias(Observed/Expected)
+    fivep.bias[fragtypes$fivep.test] <- rowSums(log(calcVLMMBias(fivep, vlmm.fivep, short=FALSE)))
+    fivep.bias[!fragtypes$fivep.test] <- rowSums(log(calcVLMMBias(fivep.short, vlmm.fivep, short=TRUE)))
+    fragtypes$fivep.bias <- fivep.bias #Result
+    
+    threep.bias[fragtypes$threep.test] <- rowSums(log(calcVLMMBias(threep, vlmm.threep, short=FALSE)))
+    threep.bias[!fragtypes$threep.test] <- rowSums(log(calcVLMMBias(threep.short, vlmm.threep, short=TRUE)))
+    fragtypes$threep.bias <- threep.bias #Result
+    
+    return(fragtypes)
 }
-
-
-
-
-
