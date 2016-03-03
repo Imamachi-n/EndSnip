@@ -44,7 +44,10 @@ range(ranges(ga))
 
 #Read gtf file
 #circ_seqs: A character vector to list out which chromosomes should be marked as circular.
-txdb <- makeTxDbFromGFF(gtffile, format="gtf", circ_seqs = character())
+txdb <- makeTxDbFromGFF(gtffile, format="gtf", circ_seqs = character()) #Core data
+
+#Extract exon information from gtf file
+ebt <- exonsBy(txdb, "tx") #Core data
 
 #Prepare single-3UTR lists
 su <- read.table(singleUTRList)
@@ -56,13 +59,63 @@ txdf <- AnnotationDbi::select(txdb,
                               keys = trxids, 
                               keytype = "TXNAME") #WARNING: which select function ?
 txdf.txid <- txdf$TXID
-txdf.txid <- txdf$TXID[1:70] #TEST: selected 10 transcripts with single-3UTR
+#txdf.txid <- txdf$TXID[1:70] #TEST: selected 10 transcripts with single-3UTR
 
-#Extract exon information from gtf file
-ebt <- exonsBy(txdb, "tx")
+#Re-extract reference trxdb using gene symbol
+txdf.geneid <- unique(txdf$GENEID)
+txdf.re <- AnnotationDbi::select(txdb,
+                                 columns = c("TXNAME", "TXID", "GENEID"),
+                                 keys = txdf.geneid,
+                                 keytype = "GENEID")
+txdf.re.txid <- txdf.re$TXID #All isoform with single-UTR
+txdf.re.geneid <- unique(txdf.re$GENEID) #All gene names with single-UTR
+
+for (geneid in txdf.re.geneid) {
+    geneid <- txdf.re.geneid[1] #TEST:
+    #Extract all isoforms for each gene
+    curr.geneid.trxid <- txdf.re[txdf.re$GENEID == geneid,]$TXID
+    for (trxid in curr.geneid.trxid) {
+        trxid <- curr.geneid.trxid[1]
+        
+        #The range of test_gene (GRanges object)
+        gene <- ebt[[trxid]]
+        generange <- range(gene)
+        strand(generange) <- "*" #Not necessary
+        
+        #Mapped reads on each transcript (st -> ed (including exon/intron))
+        suppressWarnings({
+            ga <- readGAlignAlpine(bamfile, generange) #generange should be GRanges (Not GRangeList!!)
+        })
+        
+        ga <- keepSeqlevels(ga, seqlevels(generange))
+        
+        #Compatible reads on each transcript (st -> ed (including only exon!!))
+        fco <- findCompatibleOverlaps(ga, GRangesList(gene))
+        
+        #Transcript position of compatible reads
+        reads <- gaToReadsOnTx(ga, GRangesList(gene), fco)
+        
+        trx.cov <- c(0, as.vector(coverage(reads[[1]])), 0)
+        width(gene)
+    }
+}
+
+
 
 #Extract single-3UTR exon information
 ebt <- ebt[txdf.txid]
+
+
+
+
+
+
+#
+source("C:/Users/Naoto/Documents/Visual Studio 2015/Projects/EndClip/EndClip/inst/Iron-convertion_func.R")
+source("C:/Users/Naoto/Documents/Visual Studio 2015/Projects/EndClip/EndClip/inst/Iron-GLM.R")
+ga.check <- readGAlignAlpine(bamfile, gene)
+
+
 
 #Prepare genome infor etc...
 seqlevelsStyle(Hsapiens) <- "UCSC"

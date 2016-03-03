@@ -111,6 +111,8 @@ predictOneGene <- function(gene, bamfile, fitpar, genome=Hsapiens,
     #pred.mapped <- fragtypes.temp.test2$pred*((length(fragtypes.temp.test$count)-length(fragtypes.temp.test2$count))/length(fragtypes.temp.test2$count))
     #ir.mapped <- fragtypes.temp.test2$ir
     pred.mapped <- c(0, fragtypes.temp.test2$pred*((length(fragtypes.temp.test$count)-length(fragtypes.temp.test2$count))/length(fragtypes.temp.test2$count)), 0)
+    #pred.mapped2 <- c(0, fragtypes.temp.test2$count*exp(fragtypes.temp.test2$fivep.bias + fragtypes.temp.test2$threep.bias), 0)
+    #pred.mapped3 <- c(0, fragtypes.temp.test2$count*fragtypes.temp.test2$gc, 0)
     ir.mapped <- c(IRanges(1, 2), fragtypes.temp.test2$ir, IRanges(trx.length-1, trx.length))
     
     #print(pred.mapped)
