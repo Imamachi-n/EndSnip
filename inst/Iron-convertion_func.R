@@ -3,7 +3,7 @@ mapTxToGenome <- function(exons){
     #Get strand information of each gene
     strand <- as.character(strand(exons)[1])
     #Check exon numbers
-    stopifnot(all(exons$exon_rank == seq_along(exons)))
+    #stopifnot(all(exons$exon_rank == seq_along(exons)))
     #each base list
     bases <- if (strand == "+") {
         do.call(c, lapply(exons, function(exon) start(exon):end(exon)))

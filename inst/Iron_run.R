@@ -34,9 +34,9 @@ library(speedglm) # for GLM
 #Input filepath
 #bamfile <- "/home/akimitsu/Documents/data/CFIm25_study/RNA-seq/COAD-Tumor-TCGA-A6-2675-01A-02R-1723-07/tophat_out/accepted_hits_chr19.bam"
 #gtffile <- "/home/akimitsu/Documents/database/annotation_file/Refseq_gene_hg19_June_02_2014.gtf"
-bamfile <- "C:/Users/Naoto/Documents/Visual Studio 2015/Projects/EndClip/EndClip/inst/data/accepted_hits_chr10.bam"
-gtffile <- "C:/Users/Naoto/Documents/Visual Studio 2015/Projects/EndClip/EndClip/inst/data/Refseq_gene_hg19_June_02_2014_chr10.gtf"
-singleUTRList <- "C:/Users/Naoto/Documents/Visual Studio 2015/Projects/EndClip/EndClip/DaPars_Test_data/EndClip_TCGA_Test_data_result_temp_extracted_chr10.txt"
+bamfile <- "C:/Users/Naoto/Documents/Visual Studio 2015/Projects/EndClip/EndClip/inst/data/accepted_hits_chr19.bam"
+gtffile <- "C:/Users/Naoto/Documents/Visual Studio 2015/Projects/EndClip/EndClip/inst/data/Refseq_gene_hg19_June_02_2014_chr19.gtf"
+singleUTRList <- "C:/Users/Naoto/Documents/Visual Studio 2015/Projects/EndClip/EndClip/DaPars_Test_data/EndClip_TCGA_Test_data_result_temp_extracted_chr19.txt"
 
 #Read BAM file
 ga <- readGAlignments(bamfile)
@@ -59,7 +59,7 @@ txdf <- AnnotationDbi::select(txdb,
                               keys = trxids, 
                               keytype = "TXNAME") #WARNING: which select function ?
 txdf.txid <- txdf$TXID
-#txdf.txid <- txdf$TXID[1:70] #TEST: selected 10 transcripts with single-3UTR
+txdf.txid <- txdf$TXID[1:70] #TEST: selected 10 transcripts with single-3UTR
 
 #Re-extract reference trxdb using gene symbol
 txdf.geneid <- unique(txdf$GENEID)
@@ -70,12 +70,19 @@ txdf.re <- AnnotationDbi::select(txdb,
 txdf.re.txid <- txdf.re$TXID #All isoform with single-UTR
 txdf.re.geneid <- unique(txdf.re$GENEID) #All gene names with single-UTR
 
+trxid.rep.list <- c()
 for (geneid in txdf.re.geneid) {
-    geneid <- txdf.re.geneid[1] #TEST:
     #Extract all isoforms for each gene
     curr.geneid.trxid <- txdf.re[txdf.re$GENEID == geneid,]$TXID
+    
+    if (length(curr.geneid.trxid) == 1) {
+        trxid.rep.list <- append(trxid.rep.list, curr.geneid.trxid)
+        next
+    }
+    
+    curr.geneid.test <- list()
     for (trxid in curr.geneid.trxid) {
-        trxid <- curr.geneid.trxid[1]
+        #trxid <- curr.geneid.trxid[1]
         
         #The range of test_gene (GRanges object)
         gene <- ebt[[trxid]]
@@ -94,28 +101,33 @@ for (geneid in txdf.re.geneid) {
         
         #Transcript position of compatible reads
         reads <- gaToReadsOnTx(ga, GRangesList(gene), fco)
+        trx.length <- sum(width(gene))
+        trx.exp <- length(reads[[1]])/trx.length*1000
         
         trx.cov <- c(0, as.vector(coverage(reads[[1]])), 0)
-        width(gene)
+        
+        #Result
+        curr.geneid.test$trxid <- append(curr.geneid.test$trxid, trxid)
+        curr.geneid.test$trx.exp <- append(curr.geneid.test$trx.exp, trx.exp)
+        
+        #curr.geneid.test$test <- c("test")
+        #curr.geneid.test$test <- append(curr.geneid.test$test,"test")
     }
+    max.index <- which.max(curr.geneid.test$trx.exp)
+    trxid.rep <- curr.geneid.test$trxid[max.index]
+    
+    trxid.rep.list <- append(trxid.rep.list, trxid.rep)
 }
 
+txdf.rep <- AnnotationDbi::select(txdb,
+                                  columns = c("TXNAME", "TXID", "GENEID"),
+                                  keys = as.character(trxid.rep.list),
+                                  keytype = "TXID")
 
+ebt.rep <- ebt[as.character(trxid.rep.list)]
 
 #Extract single-3UTR exon information
-ebt <- ebt[txdf.txid]
-
-
-
-
-
-
-#
-source("C:/Users/Naoto/Documents/Visual Studio 2015/Projects/EndClip/EndClip/inst/Iron-convertion_func.R")
-source("C:/Users/Naoto/Documents/Visual Studio 2015/Projects/EndClip/EndClip/inst/Iron-GLM.R")
-ga.check <- readGAlignAlpine(bamfile, gene)
-
-
+#ebt <- ebt[txdf.txid]
 
 #Prepare genome infor etc...
 seqlevelsStyle(Hsapiens) <- "UCSC"
@@ -150,9 +162,13 @@ models <- list("GC" = list(formula = "count~ns(gc, knots = gc.knots, Boundary.kn
 #models <- list("GC" = list(formula = "count~ns(gc, knots = gc.knots, Boundary.knots = gc.bk) + gene",
 #                           offset = c("vlmm")))
 
+#ebt.last <- GRangesList(lapply(ebt, function(x){
+#    x[length(x)]
+#}))
+
 
 ## -- GLM fitting --
-fitpar <- fitModelOverGenes(ebt, bamfile, fragtypes, Hsapiens, models,
+fitpar <- fitModelOverGenes(ebt.rep, bamfile, Hsapiens, models,
                             readlength = 48, zerotopos = 2, speedglm = TRUE,
                             minsize = 100, maxsize = 300)
 
@@ -182,7 +198,7 @@ models <- list("null" = list(formula = NULL, offset = NULL),
 
 
 #TEST: ELAVL1
-test_ELAVL1_RXID <- txdf2[txdf2$GENEID == "PTEN",]$TXID
+test_ELAVL1_RXID <- txdf2[txdf2$GENEID == "ELAVL1",]$TXID
 map2 <- mapTxToGenome(ebt2[[test_ELAVL1_RXID]])
 
 res <- predictOneGene(ebt2[[test_ELAVL1_RXID]], bamfile, fitpar, genome=Hsapiens,

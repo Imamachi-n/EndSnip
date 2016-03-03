@@ -37,9 +37,8 @@ matchToDensity <- function(x, d) {
 
 #GLM fitting
 
-#genes <- ebt
+#genes <- ebt.last
 #bamfile <- bamfile
-#fragtypes <- fragtypes
 #genome <- Hsapiens
 #models <- models
 #readlength <- 48
@@ -48,7 +47,7 @@ matchToDensity <- function(x, d) {
 #minsize <- 100
 #maxsize <- 300
 
-fitModelOverGenes <- function(genes, bamfile, fragtypes, genome,
+fitModelOverGenes <- function(genes, bamfile, genome,
                               models, readlength, zerotopos = 2,
                               speedglm = TRUE, minsize, maxsize) {
     #Checking
@@ -111,7 +110,7 @@ fitModelOverGenes <- function(genes, bamfile, fragtypes, genome,
         reads <- gaToReadsOnTx(ga, GRangesList(gene), fco)
         
         #Prepare dummy data(All possible fragment patterns)
-        fragtypes <- list(buildFragtypesFromExons(ebt[[gene.name]], genome = Hsapiens,
+        fragtypes <- list(buildFragtypesFromExons(genes[[gene.name]], genome = Hsapiens,
                                                   readlength = 48, minsize = 100, maxsize = 300))
         
         #Checking
