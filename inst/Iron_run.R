@@ -21,6 +21,9 @@
 ###
 ### 2016/02/24 Changed XXX....
 
+print(paste0("[", Sys.time(), "] ", "Beginning Iron run (v0.1.0)"))
+print("--------------------------------------------------")
+
 #Required libraries
 library(GenomicAlignments)
 library(GenomicFeatures)
@@ -31,9 +34,9 @@ library(speedglm) # for GLM
 #Input filepath
 #bamfile <- "/home/akimitsu/Documents/data/CFIm25_study/RNA-seq/COAD-Tumor-TCGA-A6-2675-01A-02R-1723-07/tophat_out/accepted_hits_chr19.bam"
 #gtffile <- "/home/akimitsu/Documents/database/annotation_file/Refseq_gene_hg19_June_02_2014.gtf"
-bamfile <- "C:/Users/Naoto/Documents/Visual Studio 2015/Projects/EndClip/EndClip/inst/data/accepted_hits_chr19.bam"
-gtffile <- "C:/Users/Naoto/Documents/Visual Studio 2015/Projects/EndClip/EndClip/inst/data/Refseq_gene_hg19_June_02_2014_chr19.gtf"
-singleUTRList <- "C:/Users/Naoto/Documents/Visual Studio 2015/Projects/EndClip/EndClip/DaPars_Test_data/EndClip_TCGA_Test_data_result_temp_extracted_chr19.txt"
+bamfile <- "C:/Users/Naoto/Documents/Visual Studio 2015/Projects/EndClip/EndClip/inst/data/accepted_hits_chr10.bam"
+gtffile <- "C:/Users/Naoto/Documents/Visual Studio 2015/Projects/EndClip/EndClip/inst/data/Refseq_gene_hg19_June_02_2014_chr10.gtf"
+singleUTRList <- "C:/Users/Naoto/Documents/Visual Studio 2015/Projects/EndClip/EndClip/DaPars_Test_data/EndClip_TCGA_Test_data_result_temp_extracted_chr10.txt"
 
 #Read BAM file
 ga <- readGAlignments(bamfile)
@@ -53,7 +56,7 @@ txdf <- AnnotationDbi::select(txdb,
                               keys = trxids, 
                               keytype = "TXNAME") #WARNING: which select function ?
 txdf.txid <- txdf$TXID
-txdf.txid <- txdf$TXID[1:40] #TEST: selected 10 transcripts with single-3UTR
+txdf.txid <- txdf$TXID[1:70] #TEST: selected 10 transcripts with single-3UTR
 
 #Extract exon information from gtf file
 ebt <- exonsBy(txdb, "tx")
@@ -64,7 +67,7 @@ ebt <- ebt[txdf.txid]
 #Prepare genome infor etc...
 seqlevelsStyle(Hsapiens) <- "UCSC"
 genenames <- names(ebt)
-genenames <- genenames[1:20] #TEST: selected 10 transcripts with single-3UTR
+#genenames <- genenames[1:20] #TEST: selected 10 transcripts with single-3UTR
 names(genenames) <- genenames
 
 #Load scripts
@@ -87,6 +90,14 @@ indexBam(bamfile)
 models <- list("GC" = list(formula = "count~ns(gc, knots = gc.knots, Boundary.knots = gc.bk) + gene",
                            offset = c("fraglen", "vlmm")))
 
+#models <- list("GC" = list(formula = "count~ns(relpos, knots = relpos.knots, Boundary.knots = relpos.bk) + gene",
+#                           offset = c("fraglen", "vlmm")))
+
+
+#models <- list("GC" = list(formula = "count~ns(gc, knots = gc.knots, Boundary.knots = gc.bk) + gene",
+#                           offset = c("vlmm")))
+
+
 ## -- GLM fitting --
 fitpar <- fitModelOverGenes(ebt, bamfile, fragtypes, Hsapiens, models,
                             readlength = 48, zerotopos = 2, speedglm = TRUE,
@@ -108,12 +119,27 @@ models <- list("null" = list(formula = NULL, offset = NULL),
                "GC" = list(formula = "count ~ ns(gc, knots = gc.knots, Boundary.knots = gc.bk) + 0",
                offset = c("fraglen", "vlmm")))
 
+#models <- list("null" = list(formula = NULL, offset = NULL),
+#               "GC" = list(formula = "count ~ ns(relpos, knots = relpos.knots, Boundary.knots = relpos.bk) + 0",
+#                           offset = c("fraglen", "vlmm")))
+
+#models <- list("null" = list(formula = NULL, offset = NULL),
+#               "GC" = list(formula = "count ~ ns(gc, knots = gc.knots, Boundary.knots = gc.bk) + 0",
+#                           offset = c("vlmm")))
+
+
 #TEST: ELAVL1
-test_ELAVL1_RXID <- txdf2[txdf2$GENEID == "ELAVL1",]$TXID
-#ebt2[[test_ELAVL1_RXID]]
+test_ELAVL1_RXID <- txdf2[txdf2$GENEID == "PTEN",]$TXID
+map2 <- mapTxToGenome(ebt2[[test_ELAVL1_RXID]])
 
 res <- predictOneGene(ebt2[[test_ELAVL1_RXID]], bamfile, fitpar, genome=Hsapiens,
                       models, readlength = 48, minsize = 100, maxsize = 300)
+
+#TEST: ELAVL1
+map2$cov <- as.vector(res[[1]]$pred.cov$GC)
+chrom_number <- seqlevels(ebt2[[test_ELAVL1_RXID]])
+bedgraph <- data.frame(chrom=rep(chrom_number,sum(width(ebt2[[test_ELAVL1_RXID]]))), st=map2$genome-1, ed=map2$genome, cov=map2$cov)
+write.table(bedgraph, file="chr19_ELAVL1.bg", quote=F, sep="\t", row.names=F, col.names=F)
 
 #Checking
 plotCov <- function(res, m="GC", cond, xlab="", ylab="", log=FALSE, lwd=3, ...) {
@@ -124,9 +150,9 @@ plotCov <- function(res, m="GC", cond, xlab="", ylab="", log=FALSE, lwd=3, ...) 
             I
         }
         #ymax <- transform(getYmax(res))
-        plot(transform(as.numeric(res[[i]]$frag.cov)), type="l", # ylim=c(0,ymax),
+        plot(transform(as.numeric(res[[i]]$frag.cov)), type="l",  ylim=c(0,max(as.vector(res[[1]]$pred.cov$GC))),
              xlab=xlab, ylab=ylab, col=cond[i], lwd=lwd, ...)
-        lines(transform(as.numeric(res[[i]][["pred.cov"]][[m]])), col=rgb(0,0,0,.7),lwd=lwd)
+        lines(transform(as.numeric(res[[i]][["pred.cov"]][[m]])), col=rgb(0,0,0,.7),lwd=lwd, ylim=c(0,max(as.vector(res[[1]]$pred.cov$GC))))
     }
 }
 

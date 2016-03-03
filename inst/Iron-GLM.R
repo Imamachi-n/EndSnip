@@ -140,7 +140,7 @@ fitModelOverGenes <- function(genes, bamfile, fragtypes, genome,
     if (length(fragtypes.sub.list) == 0) stop("not enough reads to model: ", bamfile)
     if (length(fragtypes.sub.list) < 2) stop("requires at least two genes to fit model")
     
-    #Check the numeber of fragments(mapped reads + dummy reads)
+    #Check the number of fragments(mapped reads + dummy reads)
     gene.nrows <- sapply(fragtypes.sub.list, nrow)
     
     #Merge each gene data
@@ -191,8 +191,10 @@ fitModelOverGenes <- function(genes, bamfile, fragtypes, genome,
     #modeltype <- "GC"
     for (modeltype in names(models)) {
         #Parameters
+        #GC-contents
         gc.knots <- seq(from = .4, to = .6, length = 3) #[0.4, 0.5, 0.6]
         gc.bk <- c(0, 1) #[0, 1]
+        #The Position of fragments
         relpos.knots <- seq(from = .25, to = .75, length = 3) #[0.25, 0.50, 0.75]
         relpos.bk <- c(0, 1) #[0, 1]
         

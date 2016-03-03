@@ -55,13 +55,17 @@ predictOneGene <- function(gene, bamfile, fitpar, genome=Hsapiens,
     #Add count data to fragtypes(dummy data)
     fragtypes.temp <- matchReadsToFraglist(reads, list(fragtypes))[[1]]
     
+    modeltype <- "GC"
+    
     ## -- fragment bias --
-    fraglen.density <- fitpar[[1]][["fraglen.density"]]
-    stopifnot(!is.null(fraglen.density)) #Checking
-    
-    #Calculate the density of fragment length from mapped reads
-    fragtypes.temp$logdfraglen <- log(matchToDensity(fragtypes.temp$fraglen, fraglen.density))
-    
+    if ("fraglen" %in% models[[modeltype]]$offset) {
+        fraglen.density <- fitpar[[1]][["fraglen.density"]]
+        stopifnot(!is.null(fraglen.density)) #Checking
+        
+        #Calculate the density of fragment length from mapped reads
+        fragtypes.temp$logdfraglen <- log(matchToDensity(fragtypes.temp$fraglen, fraglen.density))
+    }
+
     ## -- random hexamer priming bias with VLMM --
     vlmm.fivep <- fitpar[[1]][["vlmm.fivep"]] #5'side
     vlmm.threep <- fitpar[[1]][["vlmm.threep"]] #3'side
@@ -86,21 +90,35 @@ predictOneGene <- function(gene, bamfile, fitpar, genome=Hsapiens,
     res[[1]]$frag.cov <- frag.cov #raw coverage
     res[[1]]$pred.cov <- list()
     
-    for (modeltype in names(models)) {
-        # message("predicting model type: ",modeltype)
-        log.lambda <- getLogLambda(fragtypes.temp, models, modeltype, fitpar, bamfile)
-        pred0 <- exp(log.lambda)
-        pred <- pred0/mean(pred0)*mean(fragtypes.temp$count)
-        #res[[1]][["pred.cov"]][[modeltype]] <- coverage(ir, weight=pred)
-        
-        fragtypes.temp.test <- fragtypes.temp
-        fragtypes.temp.test$pred <- pred
-        fragtypes.temp.test$ir <- ir
-        fragtypes.temp.test2 <- fragtypes.temp.test[fragtypes.temp.test$count > 0,]
-        pred.mapped <- fragtypes.temp.test2$pred*100
-        ir.mapped <- fragtypes.temp.test2$ir
-        res[[1]][["pred.cov"]][["GC"]] <- coverage(ir.mapped, weight=pred.mapped)
-    }
+    gstart <- GenomicRanges::start(range(gene))
+    gend <- GenomicRanges::end(range(gene))
+    trx.length <- sum(width(ebt2[[test_ELAVL1_RXID]]))
+    
+    #for (modeltype in names(models)) {
+    # message("predicting model type: ",modeltype)
+    log.lambda <- getLogLambda(fragtypes.temp, models, modeltype, fitpar, bamfile)
+    pred0 <- exp(log.lambda)
+    pred <- pred0/mean(pred0)*mean(fragtypes.temp$count)
+    #res[[1]][["pred.cov"]][[modeltype]] <- coverage(ir, weight=pred)
+    
+    fragtypes.temp.test <- fragtypes.temp
+    fragtypes.temp.test$pred <- pred
+    fragtypes.temp.test$ir <- ir
+    fragtypes.temp.test2 <- fragtypes.temp.test[fragtypes.temp.test$count > 0,]
+    #print(length(fragtypes.temp.test$count))
+    #print(length(fragtypes.temp.test2$count))
+    
+    #pred.mapped <- fragtypes.temp.test2$pred*((length(fragtypes.temp.test$count)-length(fragtypes.temp.test2$count))/length(fragtypes.temp.test2$count))
+    #ir.mapped <- fragtypes.temp.test2$ir
+    pred.mapped <- c(0, fragtypes.temp.test2$pred*((length(fragtypes.temp.test$count)-length(fragtypes.temp.test2$count))/length(fragtypes.temp.test2$count)), 0)
+    ir.mapped <- c(IRanges(1, 2), fragtypes.temp.test2$ir, IRanges(trx.length-1, trx.length))
+    
+    #print(pred.mapped)
+    #print(ir.mapped)
+    
+    res[[1]][["pred.cov"]][["GC"]] <- coverage(ir.mapped, weight=pred.mapped)
+    #}
+    
     return(res)
 }
 
