@@ -1,5 +1,20 @@
 ## Alpine function: <https://github.com/mikelove/alpine>
 
+#SE version
+#exons <- genes[[gene.name]]
+#genome <- Hsapiens
+#readlength <- 48
+#minsize <- 100
+#maxsize <- 300
+#npre <- 8
+#npost <- 12
+#gc <- TRUE
+#gc.str <- TRUE
+#vlmm <- TRUE
+buildFragtypesFromExonsSE <- function(){
+    
+}
+
 #exons <- ebt[[genenames[1]]]
 #genome <- Hsapiens
 #readlength <- 48

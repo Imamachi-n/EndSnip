@@ -16,8 +16,14 @@ getFPBP <- function(genes, bamfile){
 
 #Count mapped reads on each transcript
 alpineFlag <- function() scanBamFlag(isSecondaryAlignment = FALSE)
-readGAlignAlpine <- function(bamfile, generange){
-    readGAlignmentPairs(bamfile, param = ScanBamParam(which = generange, flag = alpineFlag()))
+readGAlignAlpine <- function(bamfile, generange, readType){
+    if (readType == "SE") {
+        readGAlignments(bamfile, param = ScanBamParam(which = generange, flag = alpineFlag()))
+    } else if (readType == "PE") {
+        readGAlignmentPairs(bamfile, param = ScanBamParam(which = generange, flag = alpineFlag()))
+    } else {
+        stop("readType is wrong. Select SE or PE.")
+    }
 }
 
 #
@@ -37,10 +43,11 @@ matchToDensity <- function(x, d) {
 
 #GLM fitting
 
-#genes <- ebt.last
+#genes <- ebt.rep[1:70]
 #bamfile <- bamfile
 #genome <- Hsapiens
 #models <- models
+#readType <- "SE"
 #readlength <- 48
 #zerotopos <- 2
 #speedglm <- TRUE
@@ -48,7 +55,7 @@ matchToDensity <- function(x, d) {
 #maxsize <- 300
 
 fitModelOverGenes <- function(genes, bamfile, genome,
-                              models, readlength, zerotopos = 2,
+                              models, readType, readlength, zerotopos = 2,
                               speedglm = TRUE, minsize, maxsize) {
     #Checking
     stopifnot(file.exists(bamfile))
@@ -86,7 +93,7 @@ fitModelOverGenes <- function(genes, bamfile, genome,
         
         #Mapped reads on each transcript (st -> ed (including exon/intron))
         suppressWarnings({
-            ga <- readGAlignAlpine(bamfile, generange)
+            ga <- readGAlignAlpine(bamfile, generange, readType)
         })
         
         #Remove genes with Low coverage 
@@ -107,11 +114,11 @@ fitModelOverGenes <- function(genes, bamfile, genome,
         fco <- findCompatibleOverlaps(ga, GRangesList(gene))
         
         #Transcript position of compatible reads
-        reads <- gaToReadsOnTx(ga, GRangesList(gene), fco)
+        reads <- gaToReadsOnTx(ga, GRangesList(gene), fco, readType, readlength)
         
         #Prepare dummy data(All possible fragment patterns)
         fragtypes <- list(buildFragtypesFromExons(genes[[gene.name]], genome = Hsapiens,
-                                                  readlength = 48, minsize = 100, maxsize = 300))
+                                                  readlength = readlength, minsize = 100, maxsize = 300))
         
         #Checking
         #stopifnot(all(names(genes) %in% names(fragtypes)))

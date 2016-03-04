@@ -24,18 +24,18 @@ txToExon <- function(tx, map) map$exon_rank[match(tx, map$tx)]
 
 startLeft <- function(x) {
     first.plus <- as.logical(strand(first(x)) == "+")
-    ifelse(first.plus, start(first(x)), start(last(x)))
-}
+    ifelse(first.plus, start(first(x)), start(last(x))) #Select 5'/3' side: first, last function is for GAlignments object
+} #Convert GAlignmentPairs object -> GAlignments object
 
 endRight <- function(x) {
     first.plus <- as.logical(strand(first(x)) == "+")
-    ifelse(first.plus, end(last(x)), end(first(x)))
-}
+    ifelse(first.plus, end(last(x)), end(first(x))) #Select 5'/3' side: first, last function is for GAlignments object
+} #Convert GAlignmentPairs object -> GAlignments object
 
 #ga <- ga
 #grl <- GRangesList(gene)
 #fco <- fco
-gaToReadsOnTx <- function(ga, grl, fco = NULL) {
+gaToReadsOnTx <- function(ga, grl, fco = NULL, readType, readlength = 36) {
     reads <- list()
     for (i in seq_along(grl)) {
         exons <- grl[[i]] #GRanges: exons
@@ -50,13 +50,25 @@ gaToReadsOnTx <- function(ga, grl, fco = NULL) {
         map <- mapTxToGenome(exons)
         
         #Define start/end site on transcript
-        if (strand == "+") {
-            start <- genomeToTx(startLeft(ga[read.idx]), map)
-            end <- genomeToTx(endRight(ga[read.idx]), map)
-        } else if (strand == "-") {
-            start <- genomeToTx(endRight(ga[read.idx]), map)
-            end <- genomeToTx(startLeft(ga[read.idx]), map)
+        if (readType == "SE") {
+            read.length.list <- qwidth(ga[read.idx])
+            if (strand == "+") {
+                start <- genomeToTx(start(ga[read.idx]), map) #Extract mapped reads to exons
+                end <- genomeToTx(end(ga[read.idx]) + (readlength-read.length.list), map)
+            } else if (strand == "-") {
+                start <- genomeToTx(end(ga[read.idx]) + (readlength-read.length.list), map) #Extract mapped reads to exons
+                end <- genomeToTx(start(ga[read.idx]), map)
+            }
+        } else if (readType == "PE") {
+            if (strand == "+") {
+                start <- genomeToTx(startLeft(ga[read.idx]), map) #Extract mapped reads to exons
+                end <- genomeToTx(endRight(ga[read.idx]), map)
+            } else if (strand == "-") {
+                start <- genomeToTx(endRight(ga[read.idx]), map)
+                end <- genomeToTx(startLeft(ga[read.idx]), map)
+            }
         }
+        
         #Validation(Remove wrong paired-reads)
         vaild <- start < end & !is.na(start) & !is.na(end)
         reads[[i]] <- IRanges(start[vaild], end[vaild])
