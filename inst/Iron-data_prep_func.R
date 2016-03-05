@@ -3,7 +3,7 @@
 #SE version
 #exons <- genes[[gene.name]]
 #genome <- Hsapiens
-#readlength <- 48
+#readlength <- 36
 #minsize <- 100
 #maxsize <- 300
 #npre <- 8
@@ -11,8 +11,85 @@
 #gc <- TRUE
 #gc.str <- TRUE
 #vlmm <- TRUE
-buildFragtypesFromExonsSE <- function(){
+buildFragtypesFromExonsSE <- function(exons, genome, readlength,
+                                      npre = 8, npost = 12,
+                                      gc = TRUE, gc.str = TRUE, vlmm = TRUE){
+    #Checking
+    stopifnot(is(exons, "GRanges"))
+    stopifnot(is(genome, "BSgenome"))
+    stopifnot(is.numeric(readlength))
+    stopifnot(all(c("exon_rank", "exon_id") %in% names(mcols(exons))))
     
+    #ID - bases(genome position) - exon#
+    map <- mapTxToGenome(exons)
+    
+    #length of transcript
+    l <- nrow(map)
+    strand <- as.character(strand(exons)[1])
+    
+    #read sites on transcripts
+    start <- seq_len(l - readlength + 1)
+    end <- as.integer(start + readlength - 1)
+    
+    #Relative positions on transcripts
+    mid <- as.integer(0.5 * (start + end))
+    rel_pos <- mid / l
+    
+    #IRanges: st - ed - width
+    id <- IRanges(start, end)
+    
+    fragtypes <- DataFrame(start = start, end = end, rel_pos = rel_pos, id = id)
+    #Filtering: unreliable fragments
+    fragtypes <- fragtypes[fragtypes$end <= l,, drop=FALSE] #Not necessary
+    
+    #Get DNA sequences from genome
+    exon.dna <- getSeq(genome, exons) #Exon level
+    tx.dna <- unlist(exon.dna) #Transcript level
+    
+    ###Variable length Markov model (VLMM) for the random hexamer priming bias
+    if (vlmm) {
+        #5'side - sequenced read
+        fragtypes$fivep.test <- fragtypes$start - npre >= 1 #Logical: From 9nt => extention
+        fragtypes$fivep <- as(Views(tx.dna,
+                                    fragtypes$start - ifelse(fragtypes$fivep.test, npre, 0),
+                                    fragtypes$start + npost),
+                              "DNAStringSet"
+        ) #13nt or 21nt
+    }
+    
+    ###PCR amplification bias (Related with GC-contens)
+    if (gc) {
+        #Calcuate GC-contens for each fragment
+        gc.vecs <- as.vector(letterFrequencyInSlidingView(tx.dna, view.width = read.length, letters = "CG", as.prob = TRUE))
+        
+        #Add gc.vecs into fragtypes
+        fragtypes$gc <- gc.vecs
+    }
+    
+    ###Additional features: GC-contents in smaller sections
+    if (readlength >= 40) {
+        #Window size: 40nt
+        gc.40 <- as.numeric(letterFrequencyInSlidingView(tx.dna, 40, letters = "CG", as.prob = TRUE))
+        #Select 5'/3' side sequence read with larger GC-contents
+        max.gc.40 <- max(Views(gc.40,
+                               fragtypes$start,
+                               fragtypes$end - 40 + 1))
+        
+        #Result
+        fragtypes$GC40.90 <- as.numeric(max.gc.40 >= 36/40) # 40nt - 90%
+        fragtypes$GC40.80 <- as.numeric(max.gc.40 >= 32/40) # 40nt - 80%
+    }
+
+    #Window size: 20nt
+    gc.20 <- as.numeric(letterFrequencyInSlidingView(tx.dna, 20, letters = "CG", as.prob = TRUE))
+    #Select 5'/3' side sequence read with larger GC-contents
+    max.gc.20 <- max(Views(gc.20,
+                           fragtypes$start,
+                           fragtypes$end - 20 + 1))
+    
+    #Result
+    fragtypes$GC20.90 <- as.numeric(max.gc.20 >= 18/20) # 20nt - 90%
+    fragtypes$GC20.80 <- as.numeric(max.gc.20 >= 16/20) # 20nt - 80%
 }
 
 #exons <- ebt[[genenames[1]]]
