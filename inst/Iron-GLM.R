@@ -48,7 +48,7 @@ matchToDensity <- function(x, d) {
 #genome <- Hsapiens
 #models <- models
 #readType <- "SE"
-#readlength <- 48
+#readlength <- 36
 #zerotopos <- 2
 #speedglm <- TRUE
 #minsize <- 100
@@ -56,7 +56,7 @@ matchToDensity <- function(x, d) {
 
 fitModelOverGenes <- function(genes, bamfile, genome,
                               models, readType, readlength, zerotopos = 2,
-                              speedglm = TRUE, minsize, maxsize) {
+                              speedglm = TRUE, minsize = 100, maxsize = 300) {
     #Checking
     stopifnot(file.exists(bamfile))
     stopifnot(file.exists(paste0(as.character(bamfile),".bai")))
@@ -79,6 +79,7 @@ fitModelOverGenes <- function(genes, bamfile, genome,
     fitpar.sub[["coefs"]] <- list()
     
     fragtypes.sub.list <- list()
+    #i <- 1 #TEST:
     for (i in seq_along(genes)) {
         gene.name <- names(genes)[i]
         gene <- genes[[gene.name]] #GRanges: gene infor
@@ -93,7 +94,7 @@ fitModelOverGenes <- function(genes, bamfile, genome,
         
         #Mapped reads on each transcript (st -> ed (including exon/intron))
         suppressWarnings({
-            ga <- readGAlignAlpine(bamfile, generange, readType)
+            ga <- readGAlignAlpine(bamfile, generange, readType) #GAlignments object
         })
         
         #Remove genes with Low coverage 
@@ -111,15 +112,21 @@ fitModelOverGenes <- function(genes, bamfile, genome,
         }
         
         #Compatible reads on each transcript (st -> ed (including only exon!!))
-        fco <- findCompatibleOverlaps(ga, GRangesList(gene))
+        fco <- findCompatibleOverlaps(ga, GRangesList(gene)) #Hits object
         
         #Transcript position of compatible reads
         reads <- gaToReadsOnTx(ga, GRangesList(gene), fco, readType, readlength)
         
         #Prepare dummy data(All possible fragment patterns)
-        fragtypes <- list(buildFragtypesFromExons(genes[[gene.name]], genome = Hsapiens,
-                                                  readlength = readlength, minsize = 100, maxsize = 300))
-        
+        fragtypes <- list()
+        if (readType == "SE") {
+            fragtypes <- list(buildFragtypesFromExonsSE(genes[[gene.name]], genome = Hsapiens, readlength = readlength, 
+                                                        npre = 8, npost = 12, gc = TRUE, gc.str = TRUE, vlmm = TRUE))
+        } else if (readType == "PE") {
+            fragtypes <- list(buildFragtypesFromExons(genes[[gene.name]], genome = Hsapiens,
+                                                      readlength = readlength, minsize = 100, maxsize = 300))
+        }
+
         #Checking
         #stopifnot(all(names(genes) %in% names(fragtypes)))
         #if (any(sapply(models, function(m) "vlmm" %in% m$offset))) {
@@ -173,21 +180,32 @@ fitModelOverGenes <- function(genes, bamfile, genome,
     
     ## -- Random hexamer priming bias with VLMM --
     if (sapply(models, function(m) "vlmm" %in% m$offset)) {
-        #5'side sequence
-        fivep <- fragtypes.sub$fivep[fragtypes.sub$fivep.test]
-        #3'side sequence
-        threep <- fragtypes.sub$threep[fragtypes.sub$threep.test]
-        
-        #Observed/Expected nucleotide frequency (5'/3'side)
-        vlmm.fivep <- fitVLMM(fivep, gene.seqs)
-        vlmm.threep <- fitVLMM(threep, gene.seqs)
-        
+        if (readType == "SE") {
+            #5'side sequence
+            fivep <- fragtypes.sub$fivep[fragtypes.sub$fivep.test]
+            
+            #Observed/Expected nucleotide frequency (5'/3'side)
+            vlmm.fivep <- fitVLMM(fivep, gene.seqs)
+        } else if (readType == "PE") {
+            #5'side sequence
+            fivep <- fragtypes.sub$fivep[fragtypes.sub$fivep.test]
+            #3'side sequence
+            threep <- fragtypes.sub$threep[fragtypes.sub$threep.test]
+            
+            #Observed/Expected nucleotide frequency (5'/3'side)
+            vlmm.fivep <- fitVLMM(fivep, gene.seqs)
+            vlmm.threep <- fitVLMM(threep, gene.seqs)
+        }
+
         #Now calculate log(bias) for each fragment based on the VLMM
-        fragtypes.sub <- addVLMMBias(fragtypes.sub, vlmm.fivep, vlmm.threep)
-        
+        if (readType == "SE") {
+            fragtypes.sub <- addVLMMBiasSE(fragtypes.sub, vlmm.fivep)
+        } else if (readType == "PE") {
+            fragtypes.sub <- addVLMMBias(fragtypes.sub, vlmm.fivep, vlmm.threep)
+        }
+
         #Add VLMM parameters into 'fitpar.sub'
         fitpar.sub[["vlmm.fivep"]] <- vlmm.fivep
-        fitpar.sub[["vlmm.threep"]] <- vlmm.threep
     }
     
     #Allow a gene-specific intercept (although mostly handled already with downsampling)
@@ -214,9 +232,14 @@ fitModelOverGenes <- function(genes, bamfile, genome,
         if ("fraglen" %in% models[[modeltype]]$offset) {
             offset <- offset + fragtypes.sub$logdfraglen
         }
+        
         ## -- Random hexamer priming bias with VLMM --
         if ("vlmm" %in% models[[modeltype]]$offset) {
-            offset <- offset + fragtypes.sub$fivep.bias + fragtypes.sub$threep.bias
+            if (readType == "SE") {
+                offset <- offset + fragtypes.sub$fivep.bias
+            } else if (readType == "PE") {
+                offset <- offset + fragtypes.sub$fivep.bias + fragtypes.sub$threep.bias
+            }
         }
         
         #Checking

@@ -90,6 +90,8 @@ buildFragtypesFromExonsSE <- function(exons, genome, readlength,
     #Result
     fragtypes$GC20.90 <- as.numeric(max.gc.20 >= 18/20) # 20nt - 90%
     fragtypes$GC20.80 <- as.numeric(max.gc.20 >= 16/20) # 20nt - 80%
+    
+    return(fragtypes)
 }
 
 #exons <- ebt[[genenames[1]]]

@@ -216,3 +216,20 @@ addVLMMBias <- function(fragtypes, vlmm.fivep, vlmm.threep) {
     
     return(fragtypes)
 }
+
+addVLMMBiasSE <- function(fragtypes, vlmm.fivep) {
+    #5'side sequence reads
+    fivep <- fragtypes$fivep[fragtypes$fivep.test]
+    fivep.short <- fragtypes$fivep[!fragtypes$fivep.test] #Near 5'end
+    
+    ## -- 5'side sequence reads --
+    #Initialize 'fivep.bias' vector
+    fivep.bias <- numeric(nrow(fragtypes))
+
+    #Calculate random hexamer priming bias(Observed/Expected)
+    fivep.bias[fragtypes$fivep.test] <- rowSums(log(calcVLMMBias(fivep, vlmm.fivep, short=FALSE)))
+    fivep.bias[!fragtypes$fivep.test] <- rowSums(log(calcVLMMBias(fivep.short, vlmm.fivep, short=TRUE)))
+    fragtypes$fivep.bias <- fivep.bias #Result
+    
+    return(fragtypes)
+}

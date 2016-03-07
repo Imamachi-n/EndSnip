@@ -1,13 +1,17 @@
 ## Alpine function: predict.R <https://github.com/mikelove/alpine>
 
 #gene <- ebt2[[test_ELAVL1_RXID]]
+#bamfile <- bamfile
+#fitpar <- fitpar
 #genome <- Hsapiens
-#readlength <- 48
+#models <- models
+#readType <- read.type
+#readlength <- 36
 #minsize <- 100
 #maxsize <- 300
 
 predictOneGene <- function(gene, bamfile, fitpar, genome=Hsapiens,
-                           models, readlength, minsize, maxsize) {
+                           models, readType, readlength, minsize, maxsize) {
     #Checking
     stopifnot(is(gene, "GRanges"))
     stopifnot(all(sapply(models, function(x) names(x) %in% c("formula","offset"))))
@@ -16,9 +20,15 @@ predictOneGene <- function(gene, bamfile, fitpar, genome=Hsapiens,
     #bamfile <- list.files(bamfile)
     
     #Prepare dummy reads(All possible fragment patterns)
-    fragtypes <- buildFragtypesFromExons(gene, genome, readlength=readlength,
-                                         minsize=minsize, maxsize=maxsize)
-    
+    fragtypes <- NULL
+    if (readType == "SE") {
+        fragtypes <- buildFragtypesFromExonsSE(gene, genome = Hsapiens, readlength = readlength, 
+                                               npre = 8, npost = 12, gc = TRUE, gc.str = TRUE, vlmm = TRUE)
+    } else if (readType == "PE") {
+        fragtypes <- buildFragtypesFromExons(gene, genome = Hsapiens,
+                                             readlength = readlength, minsize = minsize, maxsize = maxsize)
+    }
+
     #Initialize result list
     res <- list()
     
@@ -28,7 +38,7 @@ predictOneGene <- function(gene, bamfile, fitpar, genome=Hsapiens,
     
     #Mapped reads on each transcript (st -> ed (including exon/intron))
     suppressWarnings({
-        ga <- readGAlignAlpine(bamfile, generange)
+        ga <- readGAlignAlpine(bamfile, generange, readType)
     })
     
     #IF: mapped reads -> 0
@@ -44,7 +54,7 @@ predictOneGene <- function(gene, bamfile, fitpar, genome=Hsapiens,
     fco <- findCompatibleOverlaps(ga, GRangesList(gene))
     
     #Transcript position of compatible reads
-    reads <- gaToReadsOnTx(ga, GRangesList(gene), fco)
+    reads <- gaToReadsOnTx(ga, GRangesList(gene), fco, readType, readlength)
     
     # save fragment coverage for later
     l <- sum(width(gene)) #Transcript length
@@ -67,14 +77,23 @@ predictOneGene <- function(gene, bamfile, fitpar, genome=Hsapiens,
     }
 
     ## -- random hexamer priming bias with VLMM --
-    vlmm.fivep <- fitpar[[1]][["vlmm.fivep"]] #5'side
-    vlmm.threep <- fitpar[[1]][["vlmm.threep"]] #3'side
-    stopifnot(!is.null(vlmm.fivep))
-    stopifnot(!is.null(vlmm.threep))
-    
+    if (readType == "SE") {
+        vlmm.fivep <- fitpar[[1]][["vlmm.fivep"]] #5'side
+        stopifnot(!is.null(vlmm.fivep))
+    } else if (readType == "PE") {
+        vlmm.fivep <- fitpar[[1]][["vlmm.fivep"]] #5'side
+        vlmm.threep <- fitpar[[1]][["vlmm.threep"]] #3'side
+        stopifnot(!is.null(vlmm.fivep))
+        stopifnot(!is.null(vlmm.threep))
+    }
+
     #Calculate log(bias) for each fragment based on the VLMM
-    fragtypes.temp <- addVLMMBias(fragtypes.temp, vlmm.fivep, vlmm.threep)
-    
+    if (readType == "SE") {
+        fragtypes.temp <- addVLMMBiasSE(fragtypes.temp, vlmm.fivep)
+    } else if (readType == "PE") {
+        fragtypes.temp <- addVLMMBias(fragtypes.temp, vlmm.fivep, vlmm.threep)
+    }
+
     # -- fit models --
     res[[1]] <- list()
     
@@ -96,7 +115,7 @@ predictOneGene <- function(gene, bamfile, fitpar, genome=Hsapiens,
     
     #for (modeltype in names(models)) {
     # message("predicting model type: ",modeltype)
-    log.lambda <- getLogLambda(fragtypes.temp, models, modeltype, fitpar, bamfile)
+    log.lambda <- getLogLambda(fragtypes.temp, models, modeltype, fitpar, bamfile, readType)
     pred0 <- exp(log.lambda)
     pred <- pred0/mean(pred0)*mean(fragtypes.temp$count)
     #res[[1]][["pred.cov"]][[modeltype]] <- coverage(ir, weight=pred)
@@ -132,8 +151,9 @@ predictOneGene <- function(gene, bamfile, fitpar, genome=Hsapiens,
 #modeltype <- modeltype[2]
 #fitpar <- fitpar
 #bamfile <- bamfile
+#readType <- readType
 
-getLogLambda <- function(fragtypes, models, modeltype, fitpar, bamfile) {
+getLogLambda <- function(fragtypes, models, modeltype, fitpar, bamfile, readType) {
     #Formula
     f <- models[[modeltype]]$formula
     
@@ -147,7 +167,11 @@ getLogLambda <- function(fragtypes, models, modeltype, fitpar, bamfile) {
     
     ## -- random hexamer priming bias with VLMM --
     if ("vlmm" %in% models[[modeltype]]$offset) {
-        offset <- offset + fragtypes$fivep.bias + fragtypes$threep.bias
+        if (readType == "SE") {
+            offset <- offset + fragtypes$fivep.bias
+        } else if (readType == "PE") {
+            offset <- offset + fragtypes$fivep.bias + fragtypes$threep.bias
+        }
     }
     
     #Parameters

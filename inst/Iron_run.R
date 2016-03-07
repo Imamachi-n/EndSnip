@@ -41,10 +41,10 @@ source("C:/Users/Naoto/Documents/Visual Studio 2015/Projects/EndClip/EndClip/ins
 #Input filepath
 #bamfile <- "/home/akimitsu/Documents/data/CFIm25_study/RNA-seq/COAD-Tumor-TCGA-A6-2675-01A-02R-1723-07/tophat_out/accepted_hits_chr19.bam"
 #gtffile <- "/home/akimitsu/Documents/database/annotation_file/Refseq_gene_hg19_June_02_2014.gtf"
-bamfile <- "C:/Users/Naoto/Documents/Visual Studio 2015/Projects/EndClip/EndClip/inst/data/accepted_hits_chr19_NoCTRL_SE36.bam"
+bamfile <- "C:/Users/Naoto/Documents/Visual Studio 2015/Projects/EndClip/EndClip/inst/data/accepted_hits_chr10_NoCTRL_SE36.bam"
 #bamfile <- "C:/Users/Naoto/Documents/Visual Studio 2015/Projects/EndClip/EndClip/inst/data/accepted_hits_chr19.bam"
-gtffile <- "C:/Users/Naoto/Documents/Visual Studio 2015/Projects/EndClip/EndClip/inst/data/Refseq_gene_hg19_June_02_2014_chr19.gtf"
-singleUTRList <- "C:/Users/Naoto/Documents/Visual Studio 2015/Projects/EndClip/EndClip/DaPars_Test_data/EndClip_TCGA_Test_data_result_temp_extracted_chr19.txt"
+gtffile <- "C:/Users/Naoto/Documents/Visual Studio 2015/Projects/EndClip/EndClip/inst/data/Refseq_gene_hg19_June_02_2014_chr10.gtf"
+singleUTRList <- "C:/Users/Naoto/Documents/Visual Studio 2015/Projects/EndClip/EndClip/DaPars_Test_data/EndClip_TCGA_Test_data_result_temp_extracted_chr10.txt"
 
 #Bam file information
 read.type <- "SE" #PE
@@ -177,6 +177,10 @@ names(genenames) <- genenames
 models <- list("GC" = list(formula = "count~ns(gc, knots = gc.knots, Boundary.knots = gc.bk) + gene",
                            offset = c("fraglen", "vlmm")))
 
+#SE_version
+models <- list("GC" = list(formula = "count~ns(gc, knots = gc.knots, Boundary.knots = gc.bk) + gene",
+                              offset = c("vlmm")))
+
 #models <- list("GC" = list(formula = "count~ns(relpos, knots = relpos.knots, Boundary.knots = relpos.bk) + gene",
 #                           offset = c("fraglen", "vlmm")))
 
@@ -187,7 +191,6 @@ models <- list("GC" = list(formula = "count~ns(gc, knots = gc.knots, Boundary.kn
 #ebt.last <- GRangesList(lapply(ebt, function(x){
 #    x[length(x)]
 #}))
-
 
 ## -- GLM fitting --
 fitpar <- fitModelOverGenes(ebt.rep[1:70], bamfile, Hsapiens, models, read.type,
@@ -206,9 +209,13 @@ geneids2 <- AnnotationDbi::keys(txdb, "TXNAME")
 txdf2 <- AnnotationDbi::select(txdb, columns = c("TXNAME", "TXID", "GENEID"), keys = geneids2, keytype = "TXNAME")
 
 #Fitting model
+#models <- list("null" = list(formula = NULL, offset = NULL),
+#               "GC" = list(formula = "count ~ ns(gc, knots = gc.knots, Boundary.knots = gc.bk) + 0",
+#               offset = c("fraglen", "vlmm")))
+
 models <- list("null" = list(formula = NULL, offset = NULL),
                "GC" = list(formula = "count ~ ns(gc, knots = gc.knots, Boundary.knots = gc.bk) + 0",
-               offset = c("fraglen", "vlmm")))
+               offset = c("vlmm")))
 
 #models <- list("null" = list(formula = NULL, offset = NULL),
 #               "GC" = list(formula = "count ~ ns(relpos, knots = relpos.knots, Boundary.knots = relpos.bk) + 0",
@@ -224,7 +231,7 @@ test_ELAVL1_RXID <- txdf2[txdf2$GENEID == "ELAVL1",]$TXID
 map2 <- mapTxToGenome(ebt2[[test_ELAVL1_RXID]])
 
 res <- predictOneGene(ebt2[[test_ELAVL1_RXID]], bamfile, fitpar, genome=Hsapiens,
-                      models, readlength = 48, minsize = 100, maxsize = 300)
+                      models, readType, readlength = 48, minsize = 100, maxsize = 300)
 
 #TEST: ELAVL1
 map2$cov <- as.vector(res[[1]]$pred.cov$GC)
@@ -241,7 +248,7 @@ plotCov <- function(res, m="GC", cond, xlab="", ylab="", log=FALSE, lwd=3, ...) 
             I
         }
         #ymax <- transform(getYmax(res))
-        plot(transform(as.numeric(res[[i]]$frag.cov)), type="l",  ylim=c(0,max(as.vector(res[[1]]$pred.cov$GC))),
+        plot(transform(as.numeric(res[[i]]$frag.cov)), type="l",  ylim=c(0,max(as.vector(res[[1]]$pred.cov$GC), as.vector(res[[1]]$frag.cov))),
              xlab=xlab, ylab=ylab, col=cond[i], lwd=lwd, ...)
         lines(transform(as.numeric(res[[i]][["pred.cov"]][[m]])), col=rgb(0,0,0,.7),lwd=lwd, ylim=c(0,max(as.vector(res[[1]]$pred.cov$GC))))
     }
