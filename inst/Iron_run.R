@@ -74,7 +74,7 @@ txdf <- AnnotationDbi::select(txdb,
                               keys = trxids, 
                               keytype = "TXNAME") #WARNING: which select function ?
 txdf.txid <- txdf$TXID
-txdf.txid <- txdf$TXID[1:70] #TEST: selected 10 transcripts with single-3UTR
+#txdf.txid <- txdf$TXID[1:70] #TEST: selected 10 transcripts with single-3UTR
 
 #Re-extract reference trxdb using gene symbol
 txdf.geneid <- unique(txdf$GENEID)
@@ -185,15 +185,16 @@ models <- list("GC" = list(formula = "count~ns(gc, knots = gc.knots, Boundary.kn
 #                           offset = c("fraglen", "vlmm")))
 
 
-#models <- list("GC" = list(formula = "count~ns(gc, knots = gc.knots, Boundary.knots = gc.bk) + gene",
-#                           offset = c("vlmm")))
+#SE_version
+models <- list("GC" = list(formula = "count~ns(relpos, knots = relpos.knots, Boundary.knots = relpos.bk) + gene",
+                           offset = c("vlmm")))
 
 #ebt.last <- GRangesList(lapply(ebt, function(x){
 #    x[length(x)]
 #}))
 
 ## -- GLM fitting --
-fitpar <- fitModelOverGenes(ebt.rep[1:70], bamfile, Hsapiens, models, read.type,
+fitpar <- fitModelOverGenes(ebt.rep, bamfile, Hsapiens, models, read.type,
                             readlength = read.length, zerotopos = 2, speedglm = TRUE,
                             minsize = 100, maxsize = 300)
 
@@ -221,23 +222,45 @@ models <- list("null" = list(formula = NULL, offset = NULL),
 #               "GC" = list(formula = "count ~ ns(relpos, knots = relpos.knots, Boundary.knots = relpos.bk) + 0",
 #                           offset = c("fraglen", "vlmm")))
 
-#models <- list("null" = list(formula = NULL, offset = NULL),
-#               "GC" = list(formula = "count ~ ns(gc, knots = gc.knots, Boundary.knots = gc.bk) + 0",
-#                           offset = c("vlmm")))
+#SE_version
+models <- list("null" = list(formula = NULL, offset = NULL),
+               "GC" = list(formula = "count ~ ns(relpos, knots = relpos.knots, Boundary.knots = relpos.bk) + 0",
+                           offset = c("vlmm")))
 
 
 #TEST: ELAVL1
-test_ELAVL1_RXID <- txdf2[txdf2$GENEID == "ELAVL1",]$TXID
-map2 <- mapTxToGenome(ebt2[[test_ELAVL1_RXID]])
+test_ELAVL1_RXID <- txdf2[txdf2$GENEID == "PTEN",]$TXID
 
-res <- predictOneGene(ebt2[[test_ELAVL1_RXID]], bamfile, fitpar, genome=Hsapiens,
-                      models, readType, readlength = 48, minsize = 100, maxsize = 300)
+txdf3 <- txdf2[grep("^NM", txdf2$TXNAME),]
+so <- summarizeOverlaps(ebt2, bamfile)
+so.assay <- assay(so)
+so.txdf2 <- cbind(txdf2,so.assay)
+names(so.txdf2) <- c("TXNAME", "GENEID", "TXID", "Reads")
 
-#TEST: ELAVL1
-map2$cov <- as.vector(res[[1]]$pred.cov$GC)
-chrom_number <- seqlevels(ebt2[[test_ELAVL1_RXID]])
-bedgraph <- data.frame(chrom=rep(chrom_number,sum(width(ebt2[[test_ELAVL1_RXID]]))), st=map2$genome-1, ed=map2$genome, cov=map2$cov)
-write.table(bedgraph, file="chr19_ELAVL1.bg", quote=F, sep="\t", row.names=F, col.names=F)
+RXID.list <- c()
+for (curr.geneid in unique(so.txdf2$GENEID)) {
+    test <- so.txdf2[so.txdf2$GENEID == curr.geneid,]
+    max.index <- which.max(test$Reads)
+    max.trxid <- test$TXID[max.index]
+    RXID.list <- append(RXID.list, max.trxid)
+}
+
+bedgraph <- NULL
+write.table(bedgraph, file="chr19_All.bg", quote=F, sep="\t", row.names=F, col.names=F)
+for (curr.RXID in RXID.list) {
+    if (sum(width(ebt2[[curr.RXID]])) < 200) next
+    res <- predictOneGene(ebt2[[curr.RXID]], bamfile, fitpar, genome=Hsapiens, curr.RXID,
+                          models, read.type, readlength = read.length, minsize = 100, maxsize = 300)
+    #TEST: ELAVL1
+    if (res == "NA") next
+    map2 <- mapTxToGenome(ebt2[[curr.RXID]])
+    map2$cov <- as.vector(res[[1]]$pred.cov$GC)
+    chrom_number <- seqlevels(ebt2[[curr.RXID]])
+    bedgraph <- data.frame(chrom=rep(chrom_number,sum(width(ebt2[[curr.RXID]]))), st=map2$genome-1, ed=map2$genome, cov=map2$cov)
+    bedgraph$cov[bedgraph$cov < 0.01] <- 0
+    write.table(bedgraph, file="chr19_All.bg", quote=F, sep="\t", row.names=F, col.names=F, append=T)
+}
+
 
 #Checking
 plotCov <- function(res, m="GC", cond, xlab="", ylab="", log=FALSE, lwd=3, ...) {
@@ -255,9 +278,5 @@ plotCov <- function(res, m="GC", cond, xlab="", ylab="", log=FALSE, lwd=3, ...) 
 }
 
 plotCov(res, cond="red")
-
-
-
-
 
 

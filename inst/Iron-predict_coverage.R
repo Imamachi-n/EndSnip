@@ -10,7 +10,7 @@
 #minsize <- 100
 #maxsize <- 300
 
-predictOneGene <- function(gene, bamfile, fitpar, genome=Hsapiens,
+predictOneGene <- function(gene, bamfile, fitpar, genome=Hsapiens, curr.RXID,
                            models, readType, readlength, minsize, maxsize) {
     #Checking
     stopifnot(is(gene, "GRanges"))
@@ -45,7 +45,7 @@ predictOneGene <- function(gene, bamfile, fitpar, genome=Hsapiens,
     if (length(ga) == 0) {
         res[["test"]] <- as.list(rep(NA,length(models)))
         names(res[["test"]]) <- names(models)
-        next
+        return("NA")
     }
     
     ga <- keepSeqlevels(ga, as.character(seqnames(gene)[1]))
@@ -111,7 +111,7 @@ predictOneGene <- function(gene, bamfile, fitpar, genome=Hsapiens,
     
     gstart <- GenomicRanges::start(range(gene))
     gend <- GenomicRanges::end(range(gene))
-    trx.length <- sum(width(ebt2[[test_ELAVL1_RXID]]))
+    trx.length <- sum(width(ebt2[[curr.RXID]]))
     
     #for (modeltype in names(models)) {
     # message("predicting model type: ",modeltype)

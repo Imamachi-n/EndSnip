@@ -43,7 +43,7 @@ matchToDensity <- function(x, d) {
 
 #GLM fitting
 
-#genes <- ebt.rep[1:70]
+#genes <- ebt.rep
 #bamfile <- bamfile
 #genome <- Hsapiens
 #models <- models
