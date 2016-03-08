@@ -200,12 +200,17 @@ fitModelOverGenes <- function(genes, bamfile, genome,
         #Now calculate log(bias) for each fragment based on the VLMM
         if (readType == "SE") {
             fragtypes.sub <- addVLMMBiasSE(fragtypes.sub, vlmm.fivep)
+            
+            #Add VLMM parameters into 'fitpar.sub'
+            fitpar.sub[["vlmm.fivep"]] <- vlmm.fivep
+            
         } else if (readType == "PE") {
             fragtypes.sub <- addVLMMBias(fragtypes.sub, vlmm.fivep, vlmm.threep)
+            
+            #Add VLMM parameters into 'fitpar.sub'
+            fitpar.sub[["vlmm.fivep"]] <- vlmm.fivep
+            fitpar.sub[["vlmm.threep"]] <- vlmm.threep
         }
-
-        #Add VLMM parameters into 'fitpar.sub'
-        fitpar.sub[["vlmm.fivep"]] <- vlmm.fivep
     }
     
     #Allow a gene-specific intercept (although mostly handled already with downsampling)
