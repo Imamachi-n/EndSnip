@@ -31,28 +31,33 @@ library(BSgenome.Hsapiens.UCSC.hg19)
 library(splines) # for GLM
 library(speedglm) # for GLM
 
+
 #Load scripts
-source("C:/Users/Naoto/Documents/Visual Studio 2015/Projects/EndClip/EndClip/inst/Iron-convertion_func.R")
-source("C:/Users/Naoto/Documents/Visual Studio 2015/Projects/EndClip/EndClip/inst/Iron-data_prep_func.R")
-source("C:/Users/Naoto/Documents/Visual Studio 2015/Projects/EndClip/EndClip/inst/Iron-VLMM.R")
-source("C:/Users/Naoto/Documents/Visual Studio 2015/Projects/EndClip/EndClip/inst/Iron-GLM.R")
-source("C:/Users/Naoto/Documents/Visual Studio 2015/Projects/EndClip/EndClip/inst/Iron-predict_coverage.R")
+source("/home/akimitsu/Documents/data/CFIm25_study/RNA-seq/COAD-Tumor-TCGA-A6-2675-01A-02R-1723-07/tophat_out/Iron-convertion_func.R")
+source("/home/akimitsu/Documents/data/CFIm25_study/RNA-seq/COAD-Tumor-TCGA-A6-2675-01A-02R-1723-07/tophat_out/Iron-data_prep_func.R")
+source("/home/akimitsu/Documents/data/CFIm25_study/RNA-seq/COAD-Tumor-TCGA-A6-2675-01A-02R-1723-07/tophat_out/Iron-VLMM.R")
+source("/home/akimitsu/Documents/data/CFIm25_study/RNA-seq/COAD-Tumor-TCGA-A6-2675-01A-02R-1723-07/tophat_out/Iron-GLM.R")
+source("/home/akimitsu/Documents/data/CFIm25_study/RNA-seq/COAD-Tumor-TCGA-A6-2675-01A-02R-1723-07/tophat_out/Iron-predict_coverage.R")
 
 #Input filepath
-#bamfile <- "/home/akimitsu/Documents/data/CFIm25_study/RNA-seq/COAD-Tumor-TCGA-A6-2675-01A-02R-1723-07/tophat_out/accepted_hits_chr19.bam"
-#gtffile <- "/home/akimitsu/Documents/database/annotation_file/Refseq_gene_hg19_June_02_2014.gtf"
-bamfile <- "C:/Users/Naoto/Documents/Visual Studio 2015/Projects/EndClip/EndClip/inst/data/accepted_hits_chr10_NoCTRL_SE36.bam"
+bamfile <- "/home/akimitsu/Documents/data/CFIm25_study/RNA-seq/COAD-Tumor-TCGA-A6-2675-01A-02R-1723-07/tophat_out/accepted_hits.bam"
+gtffile <- "/home/akimitsu/Documents/database/annotation_file/Refseq_gene_hg19_June_02_2014.gtf"
+singleUTRList <- "/home/akimitsu/Documents/data/CFIm25_study/RNA-seq/COAD-Tumor-TCGA-A6-2675-01A-02R-1723-07/tophat_out/EndClip_TCGA_Test_data_result_temp_extracted_All.txt"
+output.bedgraph <- "/home/akimitsu/Documents/data/CFIm25_study/RNA-seq/COAD-Tumor-TCGA-A6-2675-01A-02R-1723-07/tophat_out/Iron_predicted_cov_GC.bg"
+
+#bamfile <- "C:/Users/Naoto/Documents/Visual Studio 2015/Projects/EndClip/EndClip/inst/data/accepted_hits_chr10_NoCTRL_SE36.bam"
 #bamfile <- "C:/Users/Naoto/Documents/Visual Studio 2015/Projects/EndClip/EndClip/inst/data/accepted_hits_chr19.bam"
-gtffile <- "C:/Users/Naoto/Documents/Visual Studio 2015/Projects/EndClip/EndClip/inst/data/Refseq_gene_hg19_June_02_2014_chr10.gtf"
-singleUTRList <- "C:/Users/Naoto/Documents/Visual Studio 2015/Projects/EndClip/EndClip/DaPars_Test_data/EndClip_TCGA_Test_data_result_temp_extracted_chr10.txt"
+#gtffile <- "C:/Users/Naoto/Documents/Visual Studio 2015/Projects/EndClip/EndClip/inst/data/Refseq_gene_hg19_June_02_2014_chr10.gtf"
+#singleUTRList <- "C:/Users/Naoto/Documents/Visual Studio 2015/Projects/EndClip/EndClip/DaPars_Test_data/EndClip_TCGA_Test_data_result_temp_extracted_chr10.txt"
+#output.bedgraph <- "C:/Users/Naoto/Documents/Visual Studio 2015/Projects/EndClip/EndClip/inst/chr10_All_relpos.bg"
 
 #Bam file information
-read.type <- "SE" #PE
-read.length <- 36
+read.type <- "PE" #PE/SE
+read.length <- 48 #48/36
 
 #Read BAM file
-ga.mapped <- readGAlignments(bamfile)
-range(ranges(ga.mapped))
+#ga.mapped <- readGAlignments(bamfile)
+#range(ranges(ga.mapped))
 
 # Make index file for BAM file (If bam.bai file does not exist, ...)
 indexBam(bamfile)
@@ -158,6 +163,8 @@ txdf.rep <- AnnotationDbi::select(txdb,
 
 ebt.rep <- ebt[as.character(trxid.rep.list)]
 
+print(paste0("[", Sys.time(), "] ", "defined representative isoforms from each gene."))
+
 #Extract single-3UTR exon information
 #ebt <- ebt[txdf.txid]
 
@@ -178,16 +185,16 @@ models <- list("GC" = list(formula = "count~ns(gc, knots = gc.knots, Boundary.kn
                            offset = c("fraglen", "vlmm")))
 
 #SE_version
-models <- list("GC" = list(formula = "count~ns(gc, knots = gc.knots, Boundary.knots = gc.bk) + gene",
-                              offset = c("vlmm")))
+#models <- list("GC" = list(formula = "count~ns(gc, knots = gc.knots, Boundary.knots = gc.bk) + gene",
+#                              offset = c("vlmm")))
 
 #models <- list("GC" = list(formula = "count~ns(relpos, knots = relpos.knots, Boundary.knots = relpos.bk) + gene",
 #                           offset = c("fraglen", "vlmm")))
 
 
 #SE_version
-models <- list("GC" = list(formula = "count~ns(relpos, knots = relpos.knots, Boundary.knots = relpos.bk) + gene",
-                           offset = c("vlmm")))
+#models <- list("GC" = list(formula = "count~ns(rel_pos, knots = relpos.knots, Boundary.knots = relpos.bk) + gene",
+#                           offset = c("vlmm")))
 
 #ebt.last <- GRangesList(lapply(ebt, function(x){
 #    x[length(x)]
@@ -199,6 +206,8 @@ fitpar <- fitModelOverGenes(ebt.rep, bamfile, Hsapiens, models, read.type,
                             minsize = 100, maxsize = 300)
 
 fitpar <- list(fitpar)
+print(paste0("[", Sys.time(), "] ", "prepared reference model for GLM."))
+
 #names(fitpar) <- names(bamfiles)[1]
 
 ## -- Estimate unbiased sequence coverage --
@@ -210,22 +219,23 @@ geneids2 <- AnnotationDbi::keys(txdb, "TXNAME")
 txdf2 <- AnnotationDbi::select(txdb, columns = c("TXNAME", "TXID", "GENEID"), keys = geneids2, keytype = "TXNAME")
 
 #Fitting model
-#models <- list("null" = list(formula = NULL, offset = NULL),
-#               "GC" = list(formula = "count ~ ns(gc, knots = gc.knots, Boundary.knots = gc.bk) + 0",
-#               offset = c("fraglen", "vlmm")))
-
 models <- list("null" = list(formula = NULL, offset = NULL),
                "GC" = list(formula = "count ~ ns(gc, knots = gc.knots, Boundary.knots = gc.bk) + 0",
-               offset = c("vlmm")))
+               offset = c("fraglen", "vlmm")))
+
+#SE_version
+#models <- list("null" = list(formula = NULL, offset = NULL),
+#               "GC" = list(formula = "count ~ ns(gc, knots = gc.knots, Boundary.knots = gc.bk) + 0",
+#               offset = c("vlmm")))
 
 #models <- list("null" = list(formula = NULL, offset = NULL),
-#               "GC" = list(formula = "count ~ ns(relpos, knots = relpos.knots, Boundary.knots = relpos.bk) + 0",
+#               "GC" = list(formula = "count ~ ns(rel_pos, knots = relpos.knots, Boundary.knots = relpos.bk) + 0",
 #                           offset = c("fraglen", "vlmm")))
 
 #SE_version
-models <- list("null" = list(formula = NULL, offset = NULL),
-               "GC" = list(formula = "count ~ ns(relpos, knots = relpos.knots, Boundary.knots = relpos.bk) + 0",
-                           offset = c("vlmm")))
+#models <- list("null" = list(formula = NULL, offset = NULL),
+#               "GC" = list(formula = "count ~ ns(rel_pos, knots = relpos.knots, Boundary.knots = relpos.bk) + 0",
+#                           offset = c("vlmm")))
 
 
 #TEST: ELAVL1
@@ -246,8 +256,9 @@ for (curr.geneid in unique(so.txdf2$GENEID)) {
 }
 
 bedgraph <- NULL
-write.table(bedgraph, file="chr19_All.bg", quote=F, sep="\t", row.names=F, col.names=F)
-for (curr.RXID in RXID.list) {
+write.table(bedgraph, file = output.bedgraph, quote=F, sep="\t", row.names=F, col.names=F)
+for (curr.RXID in test_ELAVL1_RXID) {
+#for (curr.RXID in RXID.list) {
     if (sum(width(ebt2[[curr.RXID]])) < 200) next
     res <- predictOneGene(ebt2[[curr.RXID]], bamfile, fitpar, genome=Hsapiens, curr.RXID,
                           models, read.type, readlength = read.length, minsize = 100, maxsize = 300)
@@ -258,9 +269,10 @@ for (curr.RXID in RXID.list) {
     chrom_number <- seqlevels(ebt2[[curr.RXID]])
     bedgraph <- data.frame(chrom=rep(chrom_number,sum(width(ebt2[[curr.RXID]]))), st=map2$genome-1, ed=map2$genome, cov=map2$cov)
     bedgraph$cov[bedgraph$cov < 0.01] <- 0
-    write.table(bedgraph, file="chr19_All.bg", quote=F, sep="\t", row.names=F, col.names=F, append=T)
+    write.table(bedgraph, file=output.bedgraph, quote=F, sep="\t", row.names=F, col.names=F, append=T)
 }
 
+print(paste0("[", Sys.time(), "] ", "Completely finished !!"))
 
 #Checking
 plotCov <- function(res, m="GC", cond, xlab="", ylab="", log=FALSE, lwd=3, ...) {
@@ -277,6 +289,6 @@ plotCov <- function(res, m="GC", cond, xlab="", ylab="", log=FALSE, lwd=3, ...) 
     }
 }
 
-plotCov(res, cond="red")
+#plotCov(res, cond="red")
 
 
