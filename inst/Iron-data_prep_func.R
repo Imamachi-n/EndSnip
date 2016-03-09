@@ -13,7 +13,7 @@
 #vlmm <- TRUE
 buildFragtypesFromExonsSE <- function(exons, genome, readlength,
                                       npre = 8, npost = 12,
-                                      gc = TRUE, gc.str = TRUE, vlmm = TRUE){
+                                      gc = TRUE, gc.str = TRUE, vlmm = TRUE, mean.length = 200){
     #Checking
     stopifnot(is(exons, "GRanges"))
     stopifnot(is(genome, "BSgenome"))
@@ -60,7 +60,8 @@ buildFragtypesFromExonsSE <- function(exons, genome, readlength,
     ###PCR amplification bias (Related with GC-contens)
     if (gc) {
         #Calcuate GC-contens for each fragment
-        gc.vecs <- as.vector(letterFrequencyInSlidingView(tx.dna, view.width = read.length, letters = "CG", as.prob = TRUE))
+        tx.dna.add <- c(tx.dna,DNAString(paste0(rep("A", mean.length - readlength),sep="",collapse = "")))
+        gc.vecs <- as.vector(letterFrequencyInSlidingView(tx.dna.add, view.width = mean.length, letters = "CG", as.prob = TRUE))
         
         #Add gc.vecs into fragtypes
         fragtypes$gc <- gc.vecs

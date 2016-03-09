@@ -21,8 +21,8 @@
 ###
 ### 2016/02/24 Changed XXX....
 
-print(paste0("[", Sys.time(), "] ", "Beginning Iron run (v0.1.0)"))
-print("--------------------------------------------------")
+cat(paste0("[", Sys.time(), "] ", "Beginning Iron run (v0.1.0)"))
+cat("--------------------------------------------------")
 
 #Required libraries
 library(GenomicAlignments)
@@ -56,7 +56,7 @@ source("C:/Users/Naoto/Documents/Visual Studio 2015/Projects/EndClip/EndClip/ins
 bamfile <- "C:/Users/Naoto/Documents/Visual Studio 2015/Projects/EndClip/EndClip/inst/data/accepted_hits_chr10.bam"
 gtffile <- "C:/Users/Naoto/Documents/Visual Studio 2015/Projects/EndClip/EndClip/inst/data/Refseq_gene_hg19_June_02_2014_chr10.gtf"
 singleUTRList <- "C:/Users/Naoto/Documents/Visual Studio 2015/Projects/EndClip/EndClip/DaPars_Test_data/EndClip_TCGA_Test_data_result_temp_extracted_chr10.txt"
-output.bedgraph <- "C:/Users/Naoto/Documents/Visual Studio 2015/Projects/EndClip/EndClip/inst/chr10_All_relpos.bg"
+output.bedgraph <- "C:/Users/Naoto/Documents/Visual Studio 2015/Projects/EndClip/EndClip/inst/chr10_All_GC_SE36_read_extended.bg"
 
 #Bam file information
 read.type <- "PE" #PE/SE
@@ -98,6 +98,8 @@ txdf.re.txid <- txdf.re$TXID #All isoform with single-UTR
 txdf.re.geneid <- unique(txdf.re$GENEID) #All gene names with single-UTR
 
 #Define representative isoforms
+cat(paste0("[", Sys.time(), "] ", "Start defining representative isoforms from each gene."))
+
 trxid.rep.list <- c()
 for (geneid in txdf.re.geneid) {
     #geneid <- txdf.re.geneid[4] #TEST:
@@ -170,7 +172,7 @@ txdf.rep <- AnnotationDbi::select(txdb,
 
 ebt.rep <- ebt[as.character(trxid.rep.list)]
 
-print(paste0("[", Sys.time(), "] ", "defined representative isoforms from each gene."))
+cat(paste0("[", Sys.time(), "] ", "Finish defining representative isoforms from each gene."))
 
 #Extract single-3UTR exon information
 #ebt <- ebt[txdf.txid]
@@ -213,7 +215,7 @@ fitpar <- fitModelOverGenes(ebt.rep, bamfile, Hsapiens, models, read.type,
                             minsize = 100, maxsize = 300)
 
 fitpar <- list(fitpar)
-print(paste0("[", Sys.time(), "] ", "prepared reference model for GLM."))
+cat(paste0("[", Sys.time(), "] ", "Finish preparing reference model for GLM."))
 
 #names(fitpar) <- names(bamfiles)[1]
 
@@ -279,7 +281,7 @@ for (curr.RXID in RXID.list) {
     write.table(bedgraph, file=output.bedgraph, quote=F, sep="\t", row.names=F, col.names=F, append=T)
 }
 
-print(paste0("[", Sys.time(), "] ", "Completely finished !!"))
+cat(paste0("[", Sys.time(), "] ", "Completely finished !!"))
 
 #Checking
 plotCov <- function(res, m="GC", cond, xlab="", ylab="", log=FALSE, lwd=3, ...) {
