@@ -53,6 +53,9 @@
     <Compile Include="utils\make_test_wig_file.py">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="utils\star-pe-UCSC_view.sh">
+      <SubType>Code</SubType>
+    </Compile>
   </ItemGroup>
   <ItemGroup>
     <Folder Include="DaPars_Test_data\" />
@@ -70,12 +73,6 @@
     <Content Include="data\EndClip_prep_configure_file.txt" />
     <Content Include="data\hg19_refseq_extracted_3UTR.bed" />
     <Content Include="data\hg19_refseq_extracted_3UTR_PTEN_ELAVL1.bed" />
-    <Content Include="data\output_coverage_ELAVL1.png" />
-    <Content Include="data\output_coverage_PTEN.png" />
-    <Content Include="data\output_CP_variance_ELAVL1.png" />
-    <Content Include="data\output_CP_variance_PTEN.png" />
-    <Content Include="data\output_variance_ELAVL1.png" />
-    <Content Include="data\output_variance_PTEN.png" />
     <Content Include="data\polyA_DB_hg19.bed" />
     <Content Include="data\refGene.txt" />
     <Content Include="data\Refseq_gene_hg19_June_02_2014.gtf" />
@@ -85,6 +82,9 @@
     <Content Include="data\siCTRL_S_accepted_hits_PTEN_ELAVL1.bam.wig" />
     <Content Include="EndClip_preparation.sh" />
     <Content Include="EndSnip_run.sh" />
+    <Content Include="utils\star-pe-mapping.sh" />
+    <Content Include="utils\star-prep1-getDNAsequence.sh" />
+    <Content Include="utils\star-prep2-generate_genomic_index_files.sh" />
   </ItemGroup>
   <PropertyGroup>
     <VisualStudioVersion Condition="'$(VisualStudioVersion)' == ''">10.0</VisualStudioVersion>

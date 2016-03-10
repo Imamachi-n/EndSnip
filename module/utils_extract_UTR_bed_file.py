@@ -43,35 +43,46 @@ def Extract_3UTR_from_bed(gene_bed_file, gene_symbol_map_kfXref_file, output_utr
     num_saved = 0
     for line in open(gene_bed_file, 'r'):
         fields = line.rstrip().split("\t")
+        chrom = fields[0]
         refseq_id = fields[3] #refseq_id
         if '_' not in fields[0]: #chr1, chr2...
             if not refseq_id in refseq_trx_gene_symbol_dict:
                 gene_symbol = "NA"
+                print("WARNINGS: " + gene_symbol + " does not exist...")
             else:
                 gene_symbol = refseq_trx_gene_symbol_dict[refseq_id]
 
             UTR_id = [refseq_id, gene_symbol, fields[0], fields[5]] #refseq_id - gene_symbol - chrom - strand
             UTR_id_new = '|'.join(UTR_id)
 
+            CDS_start = int(fields[6])
+            CDS_end = int(fields[7])
+            if CDS_start == CDS_end: #ncRNA (not mRNA)
+                continue
+
+            trx_start = int(fields[1])
+            trx_end = int(fields[2])
             curr_strand = fields[5]
-            gene_start = int(fields[1]) #Transcript start site
+            if curr_strand == '+':
+                if (trx_end - CDS_end) == 0: #3'UTR does not exist
+                    continue
+            elif curr_strand == '-': #3'UTR does not exist
+                if (CDS_start - trx_start) == 0:
+                    continue
+
             UTR_start = ''
             UTR_end = ''
             this_UTR = ''
             UTR_end_new = ''
             if curr_strand == '+': #Strand: +
-                UTR_start = str(gene_start + int(fields[-1].strip(',').split(',')[-1])) #UTR start(0-base): Trx start site + UTR start position in trx
-                UTR_end = str(int(UTR_start) + int(fields[-2].strip(',').split(',')[-1])) #UTR end: UTR start + last exon length
-                this_UTR = fields[0] + UTR_start + curr_strand #Chrom - UTR start site - stand(+/-)
-                UTR_end_new = UTR_end
-            elif curr_strand == '-': #Strand: -
-                UTR_start = str(gene_start + int(fields[-1].strip(',').split(',')[0])) #UTR end(0-base): Trx start site + UTR end position in trx(0)
-                UTR_end = str(int(UTR_start) + int(fields[-2].strip(',').split(',')[0])) #UTR start: UTR start + first exon length in genome
-                this_UTR = fields[0] + UTR_end + curr_strand #Chrom - UTR start site - stand(+/-)
-                UTR_end_new = UTR_start
+                UTR_start = CDS_end #UTR_start (0-based)
+                this_UTR = '|'.join([chrom, UTR_start, curr_strand])
+            elif curr_strand == '-':
+                UTR_start = CDS_start #UTR_start (0-based)
+                this_UTR = '|'.join([chrom, UTR_start, curr_strand])
             else: #No strand information
                 continue
-            
+
             if not this_UTR in scanned_3UTR_list: ##TODO: 終止コドンが同じ場合、3'UTRが最も長いものを選択すべき(Bedファイル内ですでにそのように整列してある？)
                 num_exons = fields[9] #Number of exon
 

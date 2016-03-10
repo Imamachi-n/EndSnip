@@ -21,8 +21,8 @@
 ###
 ### 2016/02/24 Changed XXX....
 
-cat(paste0("[", Sys.time(), "] ", "Beginning Iron run (v0.1.0)"))
-cat("--------------------------------------------------")
+cat(paste0("[", Sys.time(), "] ", "Beginning Iron run (v0.1.0)","\n"))
+cat("--------------------------------------------------","\n")
 
 #Required libraries
 library(GenomicAlignments)
@@ -33,30 +33,30 @@ library(speedglm) # for GLM
 
 
 #Load scripts
-#source("/home/akimitsu/Documents/data/CFIm25_study/RNA-seq/COAD-Tumor-TCGA-A6-2675-01A-02R-1723-07/tophat_out/Iron-convertion_func.R")
-#source("/home/akimitsu/Documents/data/CFIm25_study/RNA-seq/COAD-Tumor-TCGA-A6-2675-01A-02R-1723-07/tophat_out/Iron-data_prep_func.R")
-#source("/home/akimitsu/Documents/data/CFIm25_study/RNA-seq/COAD-Tumor-TCGA-A6-2675-01A-02R-1723-07/tophat_out/Iron-VLMM.R")
-#source("/home/akimitsu/Documents/data/CFIm25_study/RNA-seq/COAD-Tumor-TCGA-A6-2675-01A-02R-1723-07/tophat_out/Iron-GLM.R")
-#source("/home/akimitsu/Documents/data/CFIm25_study/RNA-seq/COAD-Tumor-TCGA-A6-2675-01A-02R-1723-07/tophat_out/Iron-predict_coverage.R")
+source("/home/akimitsu/Documents/data/CFIm25_study/RNA-seq/COAD-Tumor-TCGA-A6-2675-01A-02R-1723-07/tophat_out/Iron-convertion_func.R")
+source("/home/akimitsu/Documents/data/CFIm25_study/RNA-seq/COAD-Tumor-TCGA-A6-2675-01A-02R-1723-07/tophat_out/Iron-data_prep_func.R")
+source("/home/akimitsu/Documents/data/CFIm25_study/RNA-seq/COAD-Tumor-TCGA-A6-2675-01A-02R-1723-07/tophat_out/Iron-VLMM.R")
+source("/home/akimitsu/Documents/data/CFIm25_study/RNA-seq/COAD-Tumor-TCGA-A6-2675-01A-02R-1723-07/tophat_out/Iron-GLM.R")
+source("/home/akimitsu/Documents/data/CFIm25_study/RNA-seq/COAD-Tumor-TCGA-A6-2675-01A-02R-1723-07/tophat_out/Iron-predict_coverage.R")
 
-source("C:/Users/Naoto/Documents/Visual Studio 2015/Projects/EndClip/EndClip/inst/Iron-convertion_func.R")
-source("C:/Users/Naoto/Documents/Visual Studio 2015/Projects/EndClip/EndClip/inst/Iron-data_prep_func.R")
-source("C:/Users/Naoto/Documents/Visual Studio 2015/Projects/EndClip/EndClip/inst/Iron-VLMM.R")
-source("C:/Users/Naoto/Documents/Visual Studio 2015/Projects/EndClip/EndClip/inst/Iron-GLM.R")
-source("C:/Users/Naoto/Documents/Visual Studio 2015/Projects/EndClip/EndClip/inst/Iron-predict_coverage.R")
+#source("C:/Users/Naoto/Documents/Visual Studio 2015/Projects/EndClip/EndClip/inst/Iron-convertion_func.R")
+#source("C:/Users/Naoto/Documents/Visual Studio 2015/Projects/EndClip/EndClip/inst/Iron-data_prep_func.R")
+#source("C:/Users/Naoto/Documents/Visual Studio 2015/Projects/EndClip/EndClip/inst/Iron-VLMM.R")
+#source("C:/Users/Naoto/Documents/Visual Studio 2015/Projects/EndClip/EndClip/inst/Iron-GLM.R")
+#source("C:/Users/Naoto/Documents/Visual Studio 2015/Projects/EndClip/EndClip/inst/Iron-predict_coverage.R")
 
 
 #Input filepath
-#bamfile <- "/home/akimitsu/Documents/data/CFIm25_study/RNA-seq/COAD-Tumor-TCGA-A6-2675-01A-02R-1723-07/tophat_out/accepted_hits.bam"
-#gtffile <- "/home/akimitsu/Documents/database/annotation_file/Refseq_gene_hg19_June_02_2014.gtf"
-#singleUTRList <- "/home/akimitsu/Documents/data/CFIm25_study/RNA-seq/COAD-Tumor-TCGA-A6-2675-01A-02R-1723-07/tophat_out/EndClip_TCGA_Test_data_result_temp_extracted_All.txt"
-#output.bedgraph <- "/home/akimitsu/Documents/data/CFIm25_study/RNA-seq/COAD-Tumor-TCGA-A6-2675-01A-02R-1723-07/tophat_out/Iron_predicted_cov_GC.bg"
+bamfile <- "/home/akimitsu/Documents/data/CFIm25_study/RNA-seq/COAD-Tumor-TCGA-A6-2675-01A-02R-1723-07/tophat_out/accepted_hits_chr10.bam"
+gtffile <- "/home/akimitsu/Documents/database/annotation_file/Refseq_gene_hg19_June_02_2014_chr10.gtf"
+singleUTRList <- "/home/akimitsu/Documents/data/CFIm25_study/RNA-seq/COAD-Tumor-TCGA-A6-2675-01A-02R-1723-07/tophat_out/EndClip_TCGA_Test_data_result_temp_extracted_chr10.txt"
+output.bedgraph <- "/home/akimitsu/Documents/data/CFIm25_study/RNA-seq/COAD-Tumor-TCGA-A6-2675-01A-02R-1723-07/tophat_out/Iron_predicted_cov_GC_chr10_160310.bg"
 
 #bamfile <- "C:/Users/Naoto/Documents/Visual Studio 2015/Projects/EndClip/EndClip/inst/data/accepted_hits_chr10_NoCTRL_SE36.bam"
-bamfile <- "C:/Users/Naoto/Documents/Visual Studio 2015/Projects/EndClip/EndClip/inst/data/accepted_hits_chr10.bam"
-gtffile <- "C:/Users/Naoto/Documents/Visual Studio 2015/Projects/EndClip/EndClip/inst/data/Refseq_gene_hg19_June_02_2014_chr10.gtf"
-singleUTRList <- "C:/Users/Naoto/Documents/Visual Studio 2015/Projects/EndClip/EndClip/DaPars_Test_data/EndClip_TCGA_Test_data_result_temp_extracted_chr10.txt"
-output.bedgraph <- "C:/Users/Naoto/Documents/Visual Studio 2015/Projects/EndClip/EndClip/inst/chr10_All_GC_SE36_read_extended.bg"
+#bamfile <- "C:/Users/Naoto/Documents/Visual Studio 2015/Projects/EndClip/EndClip/inst/data/accepted_hits_chr10.bam"
+#gtffile <- "C:/Users/Naoto/Documents/Visual Studio 2015/Projects/EndClip/EndClip/inst/data/Refseq_gene_hg19_June_02_2014_chr10.gtf"
+#singleUTRList <- "C:/Users/Naoto/Documents/Visual Studio 2015/Projects/EndClip/EndClip/DaPars_Test_data/EndClip_TCGA_Test_data_result_temp_extracted_chr10.txt"
+#output.bedgraph <- "C:/Users/Naoto/Documents/Visual Studio 2015/Projects/EndClip/EndClip/inst/chr10_All_GC_SE36_read_extended.bg"
 
 #Bam file information
 read.type <- "PE" #PE/SE
@@ -98,7 +98,7 @@ txdf.re.txid <- txdf.re$TXID #All isoform with single-UTR
 txdf.re.geneid <- unique(txdf.re$GENEID) #All gene names with single-UTR
 
 #Define representative isoforms
-cat(paste0("[", Sys.time(), "] ", "Start defining representative isoforms from each gene."))
+cat(paste0("[", Sys.time(), "] ", "Start defining representative isoforms from each gene.","\n"))
 
 trxid.rep.list <- c()
 for (geneid in txdf.re.geneid) {
@@ -172,7 +172,7 @@ txdf.rep <- AnnotationDbi::select(txdb,
 
 ebt.rep <- ebt[as.character(trxid.rep.list)]
 
-cat(paste0("[", Sys.time(), "] ", "Finish defining representative isoforms from each gene."))
+cat(paste0("[", Sys.time(), "] ", "Finish defining representative isoforms from each gene.","\n"))
 
 #Extract single-3UTR exon information
 #ebt <- ebt[txdf.txid]
@@ -215,7 +215,7 @@ fitpar <- fitModelOverGenes(ebt.rep, bamfile, Hsapiens, models, read.type,
                             minsize = 100, maxsize = 300)
 
 fitpar <- list(fitpar)
-cat(paste0("[", Sys.time(), "] ", "Finish preparing reference model for GLM."))
+cat(paste0("[", Sys.time(), "] ", "Finish preparing reference model for GLM.","\n"))
 
 #names(fitpar) <- names(bamfiles)[1]
 
@@ -264,10 +264,12 @@ for (curr.geneid in unique(so.txdf2$GENEID)) {
     RXID.list <- append(RXID.list, max.trxid)
 }
 
-bedgraph <- NULL
-write.table(bedgraph, file = output.bedgraph, quote=F, sep="\t", row.names=F, col.names=F)
+cat(paste0("[", Sys.time(), "] ", "Start calculating normalized coverage for each gene.","\n"))
+
+bedgraph.write <- NULL
+#write.table(bedgraph, file = output.bedgraph, quote=F, sep="\t", row.names=F, col.names=F)
 #for (curr.RXID in test_ELAVL1_RXID) {
-for (curr.RXID in RXID.list) {
+for (curr.RXID in RXID.list[1:5]) {
     if (sum(width(ebt2[[curr.RXID]])) < 400) next
     res <- predictOneGene(ebt2[[curr.RXID]], bamfile, fitpar, genome=Hsapiens, curr.RXID,
                           models, read.type, readlength = read.length, minsize = 100, maxsize = 300)
@@ -278,10 +280,11 @@ for (curr.RXID in RXID.list) {
     chrom_number <- seqlevels(ebt2[[curr.RXID]])
     bedgraph <- data.frame(chrom=rep(chrom_number,sum(width(ebt2[[curr.RXID]]))), st=map2$genome-1, ed=map2$genome, cov=map2$cov)
     bedgraph$cov[bedgraph$cov < 0.01] <- 0
-    write.table(bedgraph, file=output.bedgraph, quote=F, sep="\t", row.names=F, col.names=F, append=T)
+    bedgraph.write <- rbind(bedgraph)
 }
+write.table(bedgraph.write, file=output.bedgraph, quote=F, sep="\t", row.names=F, col.names=F, append=T)
 
-cat(paste0("[", Sys.time(), "] ", "Completely finished !!"))
+cat(paste0("[", Sys.time(), "] ", "Completely finished !!","\n"))
 
 #Checking
 plotCov <- function(res, m="GC", cond, xlab="", ylab="", log=FALSE, lwd=3, ...) {

@@ -39,7 +39,6 @@ def main(config_file):
     output_utr_file = config_dict['output_utr_file']
     output_initial_UTR_database_file = config_dict['output_initial_UTR_database_file']
 
-    '''
     #Prepare symbol_refid_map_file(kfXref file)
     now_time("Prepare kfXref file...")
     symbol_refid_map = Extract_gene_symbol_map_kfXref_file(gene_gtf_file)
@@ -51,15 +50,15 @@ def main(config_file):
     #Make initial 3'UTR database
     now_time("Prepare initial 3'UTR database...")
     raw_utr_dict = Extract_3UTR_from_bed(gene_bed_file, output_kfXref_file, output_utr_file)
-    '''
 
-    #Prepare 3UTR database with pA site information
-    now_time("Prepare 3'UTR database with pA site information...")
-    temp_file = output_initial_UTR_database_file + '.tmp'
-    cmd = 'bedtools intersect -a %s -b %s -wa -wb > %s' % (output_utr_file, pA_site_file, temp_file)
-    os.system(cmd)
 
-    Merge_pA_site_infor(temp_file, output_initial_UTR_database_file)
+    ##Prepare 3UTR database with pA site information
+    #now_time("Prepare 3'UTR database with pA site information...")
+    #temp_file = output_initial_UTR_database_file + '.tmp'
+    #cmd = 'bedtools intersect -a %s -b %s -wa -wb > %s' % (output_utr_file, pA_site_file, temp_file)
+    #os.system(cmd)
+
+    #Merge_pA_site_infor(temp_file, output_initial_UTR_database_file)
 
     now_time("Completely finished!!")
 
