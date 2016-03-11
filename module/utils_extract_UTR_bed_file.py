@@ -34,8 +34,8 @@ def Extract_3UTR_from_bed(gene_bed_file, gene_symbol_map_kfXref_file, output_utr
         if line == "\n" or line == '#':
             continue
         fields = line.strip().split("\t")
-        gene_symbol = fields[1]
         refseq_trx_id = fields[0]
+        gene_symbol = fields[1]
         refseq_trx_gene_symbol_dict[refseq_trx_id] = gene_symbol
 
     #for each transcript
@@ -53,6 +53,7 @@ def Extract_3UTR_from_bed(gene_bed_file, gene_symbol_map_kfXref_file, output_utr
                 gene_symbol = refseq_trx_gene_symbol_dict[refseq_id]
 
             UTR_id = [refseq_id, gene_symbol, fields[0], fields[5]] #refseq_id - gene_symbol - chrom - strand
+            UTR_id = list(map(str, UTR_id))
             UTR_id_new = '|'.join(UTR_id)
 
             CDS_start = int(fields[6])
@@ -76,10 +77,12 @@ def Extract_3UTR_from_bed(gene_bed_file, gene_symbol_map_kfXref_file, output_utr
             UTR_end_new = ''
             if curr_strand == '+': #Strand: +
                 UTR_start = CDS_end #UTR_start (0-based)
-                this_UTR = '|'.join([chrom, UTR_start, curr_strand])
+                
+                this_UTR = '|'.join(map(str, [chrom, UTR_start, curr_strand]))
             elif curr_strand == '-':
                 UTR_start = CDS_start #UTR_start (0-based)
-                this_UTR = '|'.join([chrom, UTR_start, curr_strand])
+                this_UTR = map(str, this_UTR)
+                this_UTR = '|'.join(map(str, [chrom, UTR_start, curr_strand]))
             else: #No strand information
                 continue
 
@@ -92,29 +95,67 @@ def Extract_3UTR_from_bed(gene_bed_file, gene_symbol_map_kfXref_file, output_utr
                         continue
 
                 #Save 3UTR information
-                write_line = [fields[0], UTR_start, UTR_end, UTR_id_new, num_exons, curr_strand] #6bed format
-                #print("\t".join(write_line), end="\n", file=output_write) #print out 3UTR information
-                scanned_3UTR_list[this_UTR] = write_line #Check this UTR
-                raw_utr_dict[UTR_id_new] = write_line #Reserve 3UTR information as dictionary
-                #num_saved += 1 #Count the number of transripts passed criteria
+                blockSizes = fields[10].strip(',').split(',')
+                blockStarts = fields[11].strip(',').split(',')
 
-            else: #Already existed this 3UTR information
-                UTR_end_old = scanned_3UTR_list[this_UTR][2]
-                if curr_strand == '+' and UTR_end_old < UTR_end_new:
-                    write_line = [fields[0], UTR_start, UTR_end, UTR_id_new, num_exons, curr_strand] #6bed format
-                    scanned_3UTR_list[this_UTR] = write_line #Check this UTR
-                    raw_utr_dict[UTR_id_new] = write_line #Reserve 3UTR information as dictionary
-                elif curr_strand == '-' and UTR_end_old > UTR_end_new:
-                    write_line = [fields[0], UTR_start, UTR_end, UTR_id_new, num_exons, curr_strand] #6bed format
-                    scanned_3UTR_list[this_UTR] = write_line #Check this UTR
-                    raw_utr_dict[UTR_id_new] = write_line #Reserve 3UTR information as dictionary
+                #Define exons with 3'UTR (index)
+                chrom_exon_st_list = [trx_start + int(blockStarts[x]) + int(blockSizes[x]) for x in range(len(blockStarts))]
+                check_block_index = len([x for x in chrom_exon_st_list if (UTR_start - x) <= 0])
 
-    #Print out 3UTR information
-    for x in raw_utr_dict.keys():
-        write_line = raw_utr_dict[x]
-        print("\t".join(write_line), end="\n", file=output_write) #print out 3UTR information
-        num_saved += 1 #Count the number of transripts passed criteria
+                write_line = []
+                if curr_strand == '+': #Index => '-'
+                    #Extract defined exons
+                    blockStarts_UTR = blockStarts[-check_block_index:]
+                    st_UTR = trx_start + int(blockStarts_UTR[0])
+
+                    blockSizes_UTR = blockSizes[-check_block_index:]
+                    blockSizes_UTR = map(str, blockSizes_UTR)
+                    blockStarts_UTR = blockStarts[-check_block_index:]
+                    blockStarts_UTR_mod = [int(x) - int(blockStarts_UTR[0]) for x in blockStarts_UTR]
+                    blockStarts_UTR_mod = map(str, blockStarts_UTR_mod)
+
+                    #Chrom - TRXstart - TRXend - name - strand - exonNumber - exonSizes - exonStarts
+                    write_line = [chrom, st_UTR, trx_end, refseq_id, curr_strand, check_block_index, ','.join(blockSizes_UTR), ','.join(blockStarts_UTR_mod)]
+
+                elif curr_strand == '-': #Index => '+'
+                    #Extract defined exons
+                    blockStarts_UTR = blockStarts[:check_block_index]
+                    ed_UTR = trx_end + int(blockStarts_UTR[-1]) + int(blockSizes[-1])
+
+                    blockSizes_UTR = blockSizes[:check_block_index]
+                    blockStarts_UTR = blockStarts[-check_block_index:]
+
+                    #Chrom - TRXstart - TRXend - name - strand - exonNumber - exonSizes - exonStarts
+                    write_line = [chrom, trx_start, ed_UTR, refseq_id, curr_strand, check_block_index, blockSizes_UTR, blockStarts_UTR]
+
+                write_line = list(map(str, write_line))
+                print("\t".join(write_line), end="\n", file=output_write) #print out 3UTR information
+
+
+
+    #            write_line = [fields[0], UTR_start, UTR_end, UTR_id_new, num_exons, curr_strand] #6bed format
+    #            #print("\t".join(write_line), end="\n", file=output_write) #print out 3UTR information
+    #            scanned_3UTR_list[this_UTR] = write_line #Check this UTR
+    #            raw_utr_dict[UTR_id_new] = write_line #Reserve 3UTR information as dictionary
+    #            #num_saved += 1 #Count the number of transripts passed criteria
+
+    #        else: #Already existed this 3UTR information
+    #            UTR_end_old = scanned_3UTR_list[this_UTR][2]
+    #            if curr_strand == '+' and UTR_end_old < UTR_end_new:
+    #                write_line = [fields[0], UTR_start, UTR_end, UTR_id_new, num_exons, curr_strand] #6bed format
+    #                scanned_3UTR_list[this_UTR] = write_line #Check this UTR
+    #                raw_utr_dict[UTR_id_new] = write_line #Reserve 3UTR information as dictionary
+    #            elif curr_strand == '-' and UTR_end_old > UTR_end_new:
+    #                write_line = [fields[0], UTR_start, UTR_end, UTR_id_new, num_exons, curr_strand] #6bed format
+    #                scanned_3UTR_list[this_UTR] = write_line #Check this UTR
+    #                raw_utr_dict[UTR_id_new] = write_line #Reserve 3UTR information as dictionary
+
+    ##Print out 3UTR information
+    #for x in raw_utr_dict.keys():
+    #    write_line = raw_utr_dict[x]
+    #    print("\t".join(write_line), end="\n", file=output_write) #print out 3UTR information
+    #    num_saved += 1 #Count the number of transripts passed criteria
 
     output_write.close()
-    return raw_utr_dict
+    return #raw_utr_dict
     print("Total extracted 3'UTR: " + str(num_saved))

@@ -12,14 +12,14 @@ maxRAM=32000000000
 maxSortRAM=32G
 outputDir="STAR_output"
 
-#mkdir ${outputDir}
+mkdir ${outputDir}
 echo "-- Mapping fastq file with STAR aligner..."
-#STAR --runThreadN ${threadNum} --genomeDir /home/akimitsu/database/STAR_index/hg38_Gencode_v24 \
-#	 --readFilesIn ${filename}_1.fastq ${filename}_2.fastq --outFilterMultimapNmax 20 \
-#	 --outFilterType BySJout --alignSJoverhangMin 8 --alignSJDBoverhangMin 1 --sjdbScore 1 \
-#	 --outFilterMismatchNmax 999 --alignIntronMin 20 --alignIntronMax 1000000 --alignMatesGapMax 1000000 \
-#	 --outFilterMismatchNoverReadLmax 0.04 --quantMode TranscriptomeSAM \
-#	 --outSAMattributes NH HI NM MD AS --outSAMtype BAM SortedByCoordinate --limitBAMsortRAM ${maxRAM}
+STAR --runThreadN ${threadNum} --genomeDir /home/akimitsu/database/STAR_index/hg38_Gencode_v24 \
+	 --readFilesIn ${filename}_1.fastq ${filename}_2.fastq --outFilterMultimapNmax 20 \
+	 --outFilterType BySJout --alignSJoverhangMin 8 --alignSJDBoverhangMin 1 --sjdbScore 1 \
+	 --outFilterMismatchNmax 999 --alignIntronMin 20 --alignIntronMax 1000000 --alignMatesGapMax 1000000 \
+	 --outFilterMismatchNoverReadLmax 0.04 --quantMode TranscriptomeSAM \
+	 --outSAMattributes NH HI NM MD AS --outSAMtype BAM SortedByCoordinate --limitBAMsortRAM ${maxRAM}
 	 #--outSAMunmapped Within --genomeLoad NoSharedMemory --outSAMheaderCommentFile COfile.txt --outSAMheaderHD @HD VN:1.4 SO:coordinate
 
 echo "-- Preparing log files..."
@@ -39,3 +39,7 @@ cat <( samtools view -H Aligned.toTranscriptome.out.bam ) \
         sort -S ${maxSortRAM} -T ./ | tr ' ' '\n' ) | \
     samtools view -@ ${threadNum} -bS - > STAR_accepted_hits_anno.bam
 mv STAR_accepted_hits_anno.bam ${outputDir}
+
+echo "-- Collect bam flagstats..."
+samtools flagstat ${outputDir}/STAR_accepted_hits_genome.bam > ${outputDir}/STAR_accepted_hits_genome_flagstat.txt
+samtools flagstat ${outputDir}/STAR_accepted_hits_anno.bam > ${outputDir}/STAR_accepted_hits_anno_flagstat.txt

@@ -40,12 +40,14 @@ def main(config_file):
     output_initial_UTR_database_file = config_dict['output_initial_UTR_database_file']
 
     #Prepare symbol_refid_map_file(kfXref file)
+    '''
     now_time("Prepare kfXref file...")
     symbol_refid_map = Extract_gene_symbol_map_kfXref_file(gene_gtf_file)
     map_file = open(output_kfXref_file, 'w')
     for refid in symbol_refid_map.keys():
         symbol = symbol_refid_map[refid]
         print(refid, symbol, sep="\t", end="\n", file=map_file)
+    '''
 
     #Make initial 3'UTR database
     now_time("Prepare initial 3'UTR database...")
