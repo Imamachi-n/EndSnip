@@ -5,6 +5,8 @@ import re
 def Extract_gene_symbol_map_kfXref_file(gene_gtf_file):
     ref_dict = {}
     for line in open(gene_gtf_file, 'r'):
+        if re.match("^#", line):
+            continue
         line = line.rstrip()
         fields = line.split("\t")
         infor = fields[8].split("; ")
@@ -77,56 +79,64 @@ def Extract_3UTR_from_bed(gene_bed_file, gene_symbol_map_kfXref_file, output_utr
             UTR_end_new = ''
             if curr_strand == '+': #Strand: +
                 UTR_start = CDS_end #UTR_start (0-based)
-                
-                this_UTR = '|'.join(map(str, [chrom, UTR_start, curr_strand]))
+                #this_UTR = '|'.join(map(str, [chrom, UTR_start, curr_strand]))
             elif curr_strand == '-':
                 UTR_start = CDS_start #UTR_start (0-based)
-                this_UTR = map(str, this_UTR)
-                this_UTR = '|'.join(map(str, [chrom, UTR_start, curr_strand]))
+                #this_UTR = '|'.join(map(str, [chrom, UTR_start, curr_strand]))
             else: #No strand information
                 continue
 
-            if not this_UTR in scanned_3UTR_list: ##TODO: 終止コドンが同じ場合、3'UTRが最も長いものを選択すべき(Bedファイル内ですでにそのように整列してある？)
+            #if not this_UTR in scanned_3UTR_list: ##TODO: 終止コドンが同じ場合、3'UTRが最も長いものを選択すべき(Bedファイル内ですでにそのように整列してある？)
+            if 0 == 0:
                 num_exons = fields[9] #Number of exon
 
                 #Remove shortRNA(e.g. miRNA, snoRNA...) information
                 if int(num_exons) == 1:
-                    if abs(int(UTR_end) - int(UTR_start)) < 200: #Remove <200 bp transripts
+                    if abs(int(trx_start) - int(trx_end)) < 200: #Remove <200 bp transripts
                         continue
 
                 #Save 3UTR information
                 blockSizes = fields[10].strip(',').split(',')
                 blockStarts = fields[11].strip(',').split(',')
 
-                #Define exons with 3'UTR (index)
-                chrom_exon_st_list = [trx_start + int(blockStarts[x]) + int(blockSizes[x]) for x in range(len(blockStarts))]
-                check_block_index = len([x for x in chrom_exon_st_list if (UTR_start - x) <= 0])
-
                 write_line = []
                 if curr_strand == '+': #Index => '-'
-                    #Extract defined exons
-                    blockStarts_UTR = blockStarts[-check_block_index:]
-                    st_UTR = trx_start + int(blockStarts_UTR[0])
+                    #Define exons with 3'UTR (index)
+                    chrom_exon_st_list = [trx_start + int(blockStarts[x]) + int(blockSizes[x]) for x in range(len(blockStarts))] #exon end
+                    check_block_index = len([x for x in chrom_exon_st_list if (UTR_start - x) <= 0])
 
-                    blockSizes_UTR = blockSizes[-check_block_index:]
-                    blockSizes_UTR = map(str, blockSizes_UTR)
+                    #Extract defined exons
                     blockStarts_UTR = blockStarts[-check_block_index:]
                     blockStarts_UTR_mod = [int(x) - int(blockStarts_UTR[0]) for x in blockStarts_UTR]
-                    blockStarts_UTR_mod = map(str, blockStarts_UTR_mod)
+                    blockSizes_UTR = blockSizes[-check_block_index:]
+                    st_UTR = trx_start + int(blockStarts_UTR[0])
+
+                    blockSizes_UTR = list(map(str, blockSizes_UTR))
+                    blockStarts_UTR_mod = list(map(str, blockStarts_UTR_mod))                    
 
                     #Chrom - TRXstart - TRXend - name - strand - exonNumber - exonSizes - exonStarts
-                    write_line = [chrom, st_UTR, trx_end, refseq_id, curr_strand, check_block_index, ','.join(blockSizes_UTR), ','.join(blockStarts_UTR_mod)]
+                    symbol = refseq_trx_gene_symbol_dict[refseq_id]
+                    write_line = [chrom, st_UTR, trx_end, refseq_id, symbol, curr_strand, check_block_index, ','.join(blockSizes_UTR), ','.join(blockStarts_UTR_mod)]
+
+                    #if check_block_index == 1:
+                          
 
                 elif curr_strand == '-': #Index => '+'
+                    #Define exons with 3'UTR (index)
+                    chrom_exon_st_list = [trx_start + int(blockStarts[x]) for x in range(len(blockStarts))] #exon start
+                    check_block_index = len([x for x in chrom_exon_st_list if (UTR_start - x) >= 0])
+
                     #Extract defined exons
                     blockStarts_UTR = blockStarts[:check_block_index]
-                    ed_UTR = trx_end + int(blockStarts_UTR[-1]) + int(blockSizes[-1])
-
                     blockSizes_UTR = blockSizes[:check_block_index]
-                    blockStarts_UTR = blockStarts[-check_block_index:]
+                    ed_UTR = trx_start + int(blockStarts_UTR[-1]) + int(blockSizes_UTR[-1])
+
+                    blockSizes_UTR = list(map(str, blockSizes_UTR))
+                    blockStarts_UTR = list(map(str, blockStarts_UTR))
 
                     #Chrom - TRXstart - TRXend - name - strand - exonNumber - exonSizes - exonStarts
-                    write_line = [chrom, trx_start, ed_UTR, refseq_id, curr_strand, check_block_index, blockSizes_UTR, blockStarts_UTR]
+                    symbol = refseq_trx_gene_symbol_dict[refseq_id]
+                    write_line = [chrom, trx_start, ed_UTR, refseq_id, symbol, curr_strand, check_block_index, ','.join(blockSizes_UTR), ','.join(blockStarts_UTR)]
 
                 write_line = list(map(str, write_line))
                 print("\t".join(write_line), end="\n", file=output_write) #print out 3UTR information
@@ -157,5 +167,5 @@ def Extract_3UTR_from_bed(gene_bed_file, gene_symbol_map_kfXref_file, output_utr
     #    num_saved += 1 #Count the number of transripts passed criteria
 
     output_write.close()
-    return #raw_utr_dict
+    return "NA"
     print("Total extracted 3'UTR: " + str(num_saved))

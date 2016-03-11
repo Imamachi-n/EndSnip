@@ -51,7 +51,7 @@ def main(config_file):
 
     #Make initial 3'UTR database
     now_time("Prepare initial 3'UTR database...")
-    raw_utr_dict = Extract_3UTR_from_bed(gene_bed_file, output_kfXref_file, output_utr_file)
+    test = Extract_3UTR_from_bed(gene_bed_file, output_kfXref_file, output_utr_file)
 
 
     ##Prepare 3UTR database with pA site information
